@@ -23,22 +23,22 @@ export const TrashView: React.FC<TrashViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Header of Trash View */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 rounded-2xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white border border-black/10 rounded-2xl">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onBackToNotes}
-            className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-rose-100/60 dark:hover:bg-rose-900/40 rounded-xl transition-colors cursor-pointer"
+            className="p-1.5 text-black hover:bg-black/5 rounded-xl transition-colors cursor-pointer"
             title="Back to active notes"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h2 className="text-base font-bold text-black flex items-center gap-2">
               <Trash2 className="w-4 h-4 text-rose-500" />
               <span>Trash / Recycle Bin</span>
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">
               Deleted notes stay here. You can restore them or permanently delete them.
             </p>
           </div>

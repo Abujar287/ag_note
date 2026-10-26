@@ -312,7 +312,8 @@ export default function App() {
         const matchesTitle = (note.title || '').toLowerCase().includes(q);
         const matchesContent = (note.content || '').toLowerCase().includes(q);
         const matchesCategory = (note.category || '').toLowerCase().includes(q);
-        if (!matchesTitle && !matchesContent && !matchesCategory) {
+        const matchesColor = (note.color || '').toLowerCase().includes(q);
+        if (!matchesTitle && !matchesContent && !matchesCategory && !matchesColor) {
           return false;
         }
       }
@@ -826,7 +827,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors selection:bg-blue-500/20 relative">
+    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-white text-black flex flex-col relative">
       {/* Top Navbar with AG Note Circular Text Logo (No + button in header) */}
       <Navbar
         searchQuery={searchQuery}

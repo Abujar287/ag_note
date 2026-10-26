@@ -53,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-2xs">
+    <header className="fixed top-0 left-0 right-0 z-30 w-full bg-white border-b border-black/10 shadow-sm">
       {/* PWA Mobile App Install Top Banner */}
       <PWAInstallBanner />
 
@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onToggleMobileMenu}
-            className="p-1.5 md:hidden text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer shrink-0"
+            className="p-1.5 md:hidden text-black hover:bg-black/5 rounded-lg transition-colors cursor-pointer shrink-0"
             aria-label="Menu"
           >
             <Menu className="w-5 h-5" />
@@ -84,10 +84,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             <div className="leading-tight min-w-0">
-              <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-black truncate uppercase">
                 AG Note
               </h1>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 hidden sm:block truncate">
+              <p className="text-[9px] sm:text-[10px] font-bold text-black/40 hidden sm:block truncate uppercase tracking-wider">
                 Smart & Secure Notepad
               </p>
             </div>
@@ -103,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search notes..."
-              className="w-full pl-9 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border border-transparent focus:border-blue-500 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-colors"
+              className="w-full pl-9 pr-7 py-2 bg-white border border-black/20 focus:border-black rounded-xl text-sm focus:outline-none text-black placeholder:text-black/40 transition-all"
             />
             {searchQuery && (
               <button
@@ -143,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onToggleViewMode}
             title={viewMode === 'grid' ? 'Switch to List View' : 'Switch to Grid View'}
-            className="p-1.5 sm:p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 text-black hover:bg-black/5 rounded-lg sm:rounded-xl border border-black/10 transition-colors cursor-pointer"
           >
             {viewMode === 'grid' ? (
               <ListIcon className="w-4 h-4" />
@@ -157,9 +157,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onExportNotes}
             title="Download JSON Backup"
-            className="hidden md:flex p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors items-center gap-1.5 text-xs font-semibold cursor-pointer"
+            className="hidden md:flex p-2 text-black hover:bg-black/5 rounded-xl border border-black/10 transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
           >
-            <Download className="w-4 h-4 text-blue-500" />
+            <Download className="w-4 h-4 text-black" />
             <span className="hidden lg:inline">Backup</span>
           </button>
 
@@ -168,9 +168,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             title="Import JSON Backup file"
-            className="hidden md:flex p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors items-center gap-1.5 text-xs font-semibold cursor-pointer"
+            className="hidden md:flex p-2 text-black hover:bg-black/5 rounded-xl border border-black/10 transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
           >
-            <Upload className="w-4 h-4 text-emerald-500" />
+            <Upload className="w-4 h-4 text-black" />
             <span className="hidden lg:inline">Restore</span>
             <input
               type="file"
@@ -183,19 +183,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
 
 
-          {/* Dark Mode Toggle */}
-          <button
-            type="button"
-            onClick={onToggleDarkMode}
-            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            className="p-1.5 sm:p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer"
-          >
-            {isDarkMode ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-slate-600" />
-            )}
-          </button>
+
         </div>
       </div>
 
@@ -208,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search notes..."
-            className="w-full pl-8 pr-7 py-1.5 bg-slate-100 dark:bg-slate-800 border border-transparent rounded-lg text-xs focus:outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+            className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/20 rounded-lg text-xs focus:outline-none text-black placeholder:text-black/40"
           />
           {searchQuery && (
             <button

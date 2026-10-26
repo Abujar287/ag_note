@@ -106,12 +106,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return (
       <div
         onClick={handleCardClick}
-        className={`group relative flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-900 transition-all cursor-pointer hover:shadow-xs ${
+        className={`group relative flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border bg-white transition-all cursor-pointer hover:shadow-xs ${
           isLockedActive
-            ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/20 dark:bg-amber-950/10'
+            ? 'border-amber-400 bg-amber-50/20'
             : isSelected
-            ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/20 ring-1 ring-blue-500'
-            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+            ? 'border-black bg-black/5 ring-1 ring-black'
+            : 'border-black/10 hover:border-black/30'
         }`}
       >
         {/* Left Side: Checkbox, Color dot, Title & preview */}
@@ -148,13 +148,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             </div>
           ) : (
             <>
-              <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors min-w-0 max-w-[130px] sm:max-w-[240px]">
+              <h3 className="text-xs sm:text-sm font-bold text-black truncate group-hover:text-blue-600 transition-colors min-w-0 max-w-[130px] sm:max-w-[240px]">
                 {note.title}
               </h3>
 
               {/* 1st Line preview only */}
               {firstLine && (
-                <span className="text-xs text-slate-500 dark:text-slate-400 truncate hidden lg:inline-block flex-1 min-w-0">
+                <span className="text-xs text-black/60 truncate hidden lg:inline-block flex-1 min-w-0">
                   — {firstLine}
                 </span>
               )}
@@ -170,13 +170,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Optional Category tag if not Uncategorized */}
           {note.category && note.category !== 'Uncategorized' && (
-            <span className="font-medium text-[11px] text-slate-500 dark:text-slate-400 hidden xl:inline bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+            <span className="font-bold text-[10px] text-black/60 uppercase tracking-widest hidden xl:inline bg-black/5 px-2 py-0.5 rounded">
               {note.category}
             </span>
           )}
 
           {/* Datetime */}
-          <span className="font-mono tabular-nums text-xs text-slate-400 shrink-0">
+          <span className="font-mono tabular-nums text-[10px] font-bold text-black/40 shrink-0">
             {formatDate(note.createdAt)}
           </span>
 
@@ -187,7 +187,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               type="button"
               onClick={handlePin}
               title={note.isPinned ? 'Unpin note' : 'Pin note'}
-              className="p-1 text-slate-400 hover:text-amber-500 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1 text-black/30 hover:text-amber-500 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
             >
               <Pin className={`w-3.5 h-3.5 ${note.isPinned ? 'text-amber-500 fill-amber-500' : ''}`} />
             </button>
@@ -197,7 +197,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               type="button"
               onClick={handleCopy}
               title="Copy note"
-              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1 text-black/30 hover:text-black rounded-md hover:bg-black/5 transition-colors cursor-pointer"
             >
               {copied ? (
                 <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -221,7 +221,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               type="button"
               onClick={handleDelete}
               title="Remove note"
-              className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+              className="p-1 text-black/30 hover:text-rose-600 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -239,8 +239,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               }
               className={`p-1 rounded-md transition-colors cursor-pointer ${
                 note.isLocked
-                  ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40'
-                  : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-amber-500 hover:text-amber-600 hover:bg-black/5'
+                  : 'text-black/30 hover:text-amber-500 hover:bg-black/5'
               }`}
             >
               {note.isLocked && !isLockedActive ? (
@@ -259,12 +259,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative flex flex-col justify-between p-3.5 rounded-xl border bg-white dark:bg-slate-900 transition-all cursor-pointer hover:shadow-md ${
+      className={`group relative flex flex-col justify-between p-3.5 rounded-xl border bg-white transition-all cursor-pointer hover:shadow-md ${
         isLockedActive
-          ? 'border-amber-300/80 dark:border-amber-800/60 bg-amber-50/15 dark:bg-amber-950/10'
+          ? 'border-amber-400 bg-amber-50/15'
           : isSelected
-          ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/20 ring-1 ring-blue-500'
-          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          ? 'border-black bg-black/5 ring-1 ring-black'
+          : 'border-black/10 hover:border-black/30'
       }`}
     >
       <div>
@@ -288,7 +288,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 isLockedActive ? 'bg-amber-500' : colorConfig.dotClass
               }`}
             />
-            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+            <span className="text-[10px] font-black text-black/60 uppercase tracking-widest truncate">
               {note.category || 'Uncategorized'}
             </span>
           </div>
@@ -300,7 +300,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             {note.isLocked && (
               <Lock
                 className={`w-3.5 h-3.5 ${
-                  isLockedActive ? 'text-amber-500' : 'text-slate-400'
+                  isLockedActive ? 'text-amber-500' : 'text-black/30'
                 }`}
               />
             )}
@@ -322,12 +322,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           </div>
         ) : (
           <>
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm mb-1 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <h3 className="font-bold text-black text-sm mb-1 truncate group-hover:text-blue-600 transition-colors">
               {note.title}
             </h3>
 
             {/* Content: ONLY 1st line of the note */}
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate leading-snug mb-2 font-normal">
+            <p className="text-xs text-black/60 truncate leading-snug mb-2 font-normal">
               {firstLine || 'No content'}
             </p>
           </>
@@ -378,7 +378,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             type="button"
             onClick={handleDelete}
             title="Remove note"
-            className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors cursor-pointer"
+            className="p-1 text-black/30 hover:text-rose-600 rounded transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
