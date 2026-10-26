@@ -20,6 +20,8 @@ import { CategoryModal } from './components/CategoryModal';
 import { PasswordModal } from './components/PasswordModal';
 import { TrashView } from './components/TrashView';
 import { Toast, ToastData } from './components/Toast';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import importedNotesRaw from './data/importedNotes.json';
 
 const DEFAULT_CATEGORIES = ['General', 'Personal', 'Work', 'Bajar', 'Accounts', 'Links'];
@@ -770,7 +772,7 @@ export default function App() {
       />
 
       {/* Main Workspace Layout */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-[90px] sm:pt-[68px] pb-6 flex-1 w-full max-w-full overflow-x-hidden flex flex-col md:flex-row gap-4 sm:gap-5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-[105px] sm:pt-[76px] pb-24 sm:pb-8 flex-1 w-full max-w-full overflow-x-hidden flex flex-col md:flex-row gap-4 sm:gap-5">
         {/* Sidebar */}
         <Sidebar
           categories={categories}
@@ -1025,11 +1027,30 @@ export default function App() {
           setIsNoteModalOpen(true);
         }}
         title="Create New Note"
-        className="fixed bottom-6 right-5 sm:right-7 z-40 w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xl flex items-center justify-center border-2 border-white dark:border-slate-800 transition-all hover:scale-105 hover:shadow-2xl cursor-pointer ring-4 ring-blue-500/20"
+        className="fixed bottom-20 md:bottom-7 right-4 sm:right-7 z-40 w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xl flex items-center justify-center border-2 border-white dark:border-slate-800 transition-all hover:scale-105 hover:shadow-2xl cursor-pointer ring-4 ring-blue-500/20"
         aria-label="Create New Note"
       >
         <Plus className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
       </button>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        activeCategory={activeCategory}
+        isTrashView={isTrashView}
+        onSelectAllNotes={() => {
+          setIsTrashView(false);
+          setActiveCategory('all');
+          setSelectedNoteIds([]);
+        }}
+        onOpenCategories={() => setIsCategoryModalOpen(true)}
+        onFocusSearch={() => {
+          setIsMobileMenuOpen(true);
+        }}
+        onSelectTrash={() => {
+          setIsTrashView(true);
+          setSelectedNoteIds([]);
+        }}
+      />
 
       {/* Action Toast (Auto-dismisses in 3 seconds) */}
       <Toast toast={toast} onClose={() => setToast(null)} />

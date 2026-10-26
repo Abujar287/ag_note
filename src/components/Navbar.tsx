@@ -12,6 +12,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { ViewMode } from '../types/note';
+import { PWAInstallHeaderButton, PWAInstallBanner } from './PWAInstallBanner';
 
 interface NavbarProps {
   searchQuery: string;
@@ -53,6 +54,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-2xs">
+      {/* PWA Mobile App Install Top Banner */}
+      <PWAInstallBanner />
+
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4">
         {/* Zone 1: Mobile Menu trigger & "AG Note" Circular App Icon */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
@@ -115,6 +119,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Zone 3: Actions (No + button in header as requested) */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* PWA App Install Button */}
+          <PWAInstallHeaderButton />
+
           {/* Quick Lock All button if any notes are unlocked */}
           {unlockedCount > 0 && onLockAll && (
             <button
