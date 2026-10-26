@@ -8,6 +8,8 @@ import {
   Square,
   HelpCircle,
   Lock,
+  Folder,
+  X,
 } from 'lucide-react';
 import { Note, SortMode, ViewMode, MASTER_PASSWORD } from './types/note';
 import { Navbar } from './components/Navbar';
@@ -17,55 +19,92 @@ import { NoteModal } from './components/NoteModal';
 import { ViewNoteModal } from './components/ViewNoteModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { CategoryModal } from './components/CategoryModal';
+import { BatchCategoryModal } from './components/BatchCategoryModal';
 import { PasswordModal } from './components/PasswordModal';
 import { TrashView } from './components/TrashView';
 import { Toast, ToastData } from './components/Toast';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
-import { MobileBottomNav } from './components/MobileBottomNav';
+import { FloatingBatchBar } from './components/FloatingBatchBar';
 import importedNotesRaw from './data/importedNotes.json';
 
 const DEFAULT_CATEGORIES = ['General', 'Personal', 'Work', 'Bajar', 'Accounts', 'Links'];
 
+// Permanent record of deleted note IDs so deleted notes never resurface
+const getDeletedNoteIds = (): Set<string> => {
+  try {
+    const saved = localStorage.getItem('smart_notepad_deleted_ids');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return new Set(parsed);
+    }
+  } catch {
+    // ignore
+  }
+  return new Set();
+};
+
+const addDeletedNoteIds = (ids: string[]) => {
+  try {
+    const current = getDeletedNoteIds();
+    ids.forEach((id) => current.add(id));
+    localStorage.setItem('smart_notepad_deleted_ids', JSON.stringify(Array.from(current)));
+  } catch {
+    // ignore
+  }
+};
+
+const removeDeletedNoteIds = (ids: string[]) => {
+  try {
+    const current = getDeletedNoteIds();
+    ids.forEach((id) => current.delete(id));
+    localStorage.setItem('smart_notepad_deleted_ids', JSON.stringify(Array.from(current)));
+  } catch {
+    // ignore
+  }
+};
+
 export default function App() {
-  // Primary States: Initializing with all 856 notes imported from attached file!
-  // All notes default to 'Uncategorized' until the user assigns them to a category.
+  // Primary States: Initializing with persistent storage and deleted IDs filtering
   const [notes, setNotes] = useState<Note[]>(() => {
     try {
-      const savedV3 = localStorage.getItem('smart_notepad_notes_v3');
-      if (savedV3) {
-        const parsed = JSON.parse(savedV3);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const deletedIds = getDeletedNoteIds();
+      const isInitialized = localStorage.getItem('smart_notepad_initialized_v4');
+      const savedV4 = localStorage.getItem('smart_notepad_notes_v4');
+
+      if (isInitialized && savedV4 !== null) {
+        const parsed = JSON.parse(savedV4);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((n: Note) => !deletedIds.has(n.id));
+        }
       }
 
-      // Migration / Fresh initialization:
-      // All 856 notes from savednotes_48060c46.txt must be 'Uncategorized'
-      const uncategorizedImported = (importedNotesRaw as Note[]).map((n) => ({
-        ...n,
-        category: 'Uncategorized',
-      }));
-
-      // If user had created custom non-imported notes in v2, preserve them
-      const savedV2 = localStorage.getItem('smart_notepad_notes_v2');
-      if (savedV2) {
+      // Migration / Initial import
+      let initialList: Note[] = [];
+      const savedV3 = localStorage.getItem('smart_notepad_notes_v3');
+      if (savedV3) {
         try {
-          const parsedV2 = JSON.parse(savedV2);
-          if (Array.isArray(parsedV2)) {
-            const customNotes = parsedV2.filter((n: Note) => !n.id.startsWith('imported_'));
-            if (customNotes.length > 0) {
-              const combined = [...customNotes, ...uncategorizedImported];
-              localStorage.setItem('smart_notepad_notes_v3', JSON.stringify(combined));
-              return combined;
-            }
+          const parsedV3 = JSON.parse(savedV3);
+          if (Array.isArray(parsedV3)) {
+            initialList = parsedV3;
           }
         } catch {
           // ignore
         }
       }
 
-      localStorage.setItem('smart_notepad_notes_v3', JSON.stringify(uncategorizedImported));
-      return uncategorizedImported;
+      if (initialList.length === 0 && !isInitialized) {
+        initialList = (importedNotesRaw as Note[]).map((n) => ({
+          ...n,
+          category: 'Uncategorized',
+        }));
+      }
+
+      const filtered = initialList.filter((n: Note) => !deletedIds.has(n.id));
+      localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(filtered));
+      localStorage.setItem('smart_notepad_initialized_v4', 'true');
+      return filtered;
     } catch {
-      return importedNotesRaw as Note[];
+      return [];
     }
   });
 
@@ -115,6 +154,7 @@ export default function App() {
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
+  const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   // Password Unlock Modal state
@@ -163,15 +203,14 @@ export default function App() {
       localStorage.setItem('notepad_theme', 'dark');
     } else {
       root.classList.remove('dark');
-      localStorage.setItem('notepad_theme', 'light');
     }
   }, [isDarkMode]);
 
   // Persist Notes
   useEffect(() => {
     try {
+      localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(notes));
       localStorage.setItem('smart_notepad_notes_v3', JSON.stringify(notes));
-      localStorage.setItem('smart_notepad_notes_v2', JSON.stringify(notes));
     } catch {
       // ignore
     }
@@ -520,6 +559,7 @@ export default function App() {
           deletedAt: new Date().toISOString(),
         };
 
+        addDeletedNoteIds([note.id]);
         setNotes((prev) => prev.filter((n) => n.id !== note.id));
         setTrashNotes((prev) => [trashedNote, ...prev]);
         setSelectedNoteIds((prev) => prev.filter((id) => id !== note.id));
@@ -530,6 +570,7 @@ export default function App() {
 
         // Show toast with Undo (3 seconds auto-dismiss)
         showToast('Note moved to Trash', 'success', () => {
+          removeDeletedNoteIds([note.id]);
           setTrashNotes((currTrash) => currTrash.filter((t) => t.id !== note.id));
           setNotes((currNotes) => [note, ...currNotes]);
           showToast('Note restored');
@@ -542,6 +583,7 @@ export default function App() {
   const requestBatchDelete = () => {
     if (selectedNoteIds.length === 0) return;
     const selectedCount = selectedNoteIds.length;
+    const currentSelectedIds = [...selectedNoteIds];
 
     setDeleteModal({
       isOpen: true,
@@ -552,18 +594,20 @@ export default function App() {
         const remaining: Note[] = [];
 
         notes.forEach((n) => {
-          if (selectedNoteIds.includes(n.id)) {
+          if (currentSelectedIds.includes(n.id)) {
             toTrash.push({ ...n, deletedAt: new Date().toISOString() });
           } else {
             remaining.push(n);
           }
         });
 
+        addDeletedNoteIds(currentSelectedIds);
         setNotes(remaining);
         setTrashNotes((prev) => [...toTrash, ...prev]);
         setSelectedNoteIds([]);
 
         showToast(`${selectedCount} notes moved to Trash`, 'success', () => {
+          removeDeletedNoteIds(currentSelectedIds);
           setTrashNotes((currTrash) => currTrash.filter((t) => !toTrash.some((x) => x.id === t.id)));
           setNotes((currNotes) => [...toTrash.map((x) => ({ ...x, deletedAt: undefined })), ...currNotes]);
           showToast('All notes restored');
@@ -577,6 +621,7 @@ export default function App() {
     const noteToRestore = trashNotes.find((n) => n.id === id);
     if (!noteToRestore) return;
 
+    removeDeletedNoteIds([id]);
     setTrashNotes((prev) => prev.filter((n) => n.id !== id));
     setNotes((prev) => [{ ...noteToRestore, deletedAt: undefined }, ...prev]);
     showToast('Note restored successfully');
@@ -586,6 +631,8 @@ export default function App() {
   const handleRestoreAll = () => {
     if (trashNotes.length === 0) return;
     const count = trashNotes.length;
+    const ids = trashNotes.map((n) => n.id);
+    removeDeletedNoteIds(ids);
     setNotes((prev) => [...trashNotes.map((n) => ({ ...n, deletedAt: undefined })), ...prev]);
     setTrashNotes([]);
     showToast(`All ${count} notes restored`);
@@ -599,6 +646,7 @@ export default function App() {
       isPermanent: true,
       count: 1,
       onConfirm: () => {
+        addDeletedNoteIds([note.id]);
         setTrashNotes((prev) => prev.filter((n) => n.id !== note.id));
         showToast('Note permanently deleted');
       },
@@ -613,6 +661,7 @@ export default function App() {
       isPermanent: true,
       count: trashNotes.length,
       onConfirm: () => {
+        addDeletedNoteIds(trashNotes.map((n) => n.id));
         setTrashNotes([]);
         showToast('Trash emptied');
       },
@@ -621,12 +670,38 @@ export default function App() {
 
   // Re-import all notes from the attached file on demand
   const handleReloadAttachedNotes = () => {
+    localStorage.removeItem('smart_notepad_deleted_ids');
     setNotes(importedNotesRaw as Note[]);
     setCategories(DEFAULT_CATEGORIES);
     setUnlockedNoteIds(new Set());
     localStorage.setItem('smart_notepad_imported_856', 'true');
-    localStorage.setItem('smart_notepad_notes_v2', JSON.stringify(importedNotesRaw));
+    localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(importedNotesRaw));
     showToast(`Imported ${importedNotesRaw.length} notes from attached file!`);
+  };
+
+  // Batch Category Assignment
+  const handleBatchAssignCategory = (targetCategory: string) => {
+    if (selectedNoteIds.length === 0) return;
+    const count = selectedNoteIds.length;
+    setNotes((prev) =>
+      prev.map((n) =>
+        selectedNoteIds.includes(n.id)
+          ? { ...n, category: targetCategory, updatedAt: new Date().toISOString() }
+          : n
+      )
+    );
+    showToast(`${count} notes assigned to "${targetCategory}"`);
+    setSelectedNoteIds([]);
+    setIsBatchCategoryModalOpen(false);
+  };
+
+  const handleCreateAndBatchAssign = (newCategoryName: string) => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    if (!categories.includes(trimmed)) {
+      setCategories((prev) => [...prev, trimmed]);
+    }
+    handleBatchAssignCategory(trimmed);
   };
 
   // ==================== Category Handlers ====================
@@ -772,7 +847,7 @@ export default function App() {
       />
 
       {/* Main Workspace Layout */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-[105px] sm:pt-[76px] pb-24 sm:pb-8 flex-1 w-full max-w-full overflow-x-hidden flex flex-col md:flex-row gap-4 sm:gap-5">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-[105px] sm:pt-[76px] pb-8 flex-1 w-full max-w-full overflow-x-hidden flex flex-col md:flex-row gap-4 sm:gap-5">
         {/* Sidebar */}
         <Sidebar
           categories={categories}
@@ -851,7 +926,7 @@ export default function App() {
                 </div>
 
                 {/* Batch Actions Bar */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {filteredNotes.length > 0 && (
                     <button
                       type="button"
@@ -870,11 +945,12 @@ export default function App() {
                   {selectedNoteIds.length > 0 && (
                     <button
                       type="button"
-                      onClick={requestBatchDelete}
-                      className="text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/50 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                      onClick={() => setSelectedNoteIds([])}
+                      title="Deselect all"
+                      className="text-xs text-slate-500 font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete ({selectedNoteIds.length})</span>
+                      <X className="w-3.5 h-3.5" />
+                      <span>Clear Selection</span>
                     </button>
                   )}
                 </div>
@@ -1019,6 +1095,17 @@ export default function App() {
         onClose={() => setIsCategoryModalOpen(false)}
       />
 
+      {/* Batch Assign Category Modal */}
+      <BatchCategoryModal
+        isOpen={isBatchCategoryModalOpen}
+        selectedCount={selectedNoteIds.length}
+        categories={categories}
+        categoryCounts={categoryCounts}
+        onAssignCategory={handleBatchAssignCategory}
+        onCreateAndAssign={handleCreateAndBatchAssign}
+        onClose={() => setIsBatchCategoryModalOpen(false)}
+      />
+
       {/* Floating Circular Action Button for New Note on Right Side of Display */}
       <button
         type="button"
@@ -1027,29 +1114,20 @@ export default function App() {
           setIsNoteModalOpen(true);
         }}
         title="Create New Note"
-        className="fixed bottom-20 md:bottom-7 right-4 sm:right-7 z-40 w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xl flex items-center justify-center border-2 border-white dark:border-slate-800 transition-all hover:scale-105 hover:shadow-2xl cursor-pointer ring-4 ring-blue-500/20"
+        className={`fixed bottom-6 sm:bottom-8 right-4 sm:right-7 z-40 w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xl flex items-center justify-center border-2 border-white dark:border-slate-800 transition-all hover:scale-105 hover:shadow-2xl cursor-pointer ring-4 ring-blue-500/20 ${
+          selectedNoteIds.length > 0 ? 'scale-0 opacity-0' : 'scale-100 opacity-100'
+        }`}
         aria-label="Create New Note"
       >
         <Plus className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.5]" />
       </button>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <MobileBottomNav
-        activeCategory={activeCategory}
-        isTrashView={isTrashView}
-        onSelectAllNotes={() => {
-          setIsTrashView(false);
-          setActiveCategory('all');
-          setSelectedNoteIds([]);
-        }}
-        onOpenCategories={() => setIsCategoryModalOpen(true)}
-        onFocusSearch={() => {
-          setIsMobileMenuOpen(true);
-        }}
-        onSelectTrash={() => {
-          setIsTrashView(true);
-          setSelectedNoteIds([]);
-        }}
+      {/* Floating Batch Action Bar (Appears when notes are selected) */}
+      <FloatingBatchBar
+        selectedCount={selectedNoteIds.length}
+        onClear={() => setSelectedNoteIds([])}
+        onAssignCategory={() => setIsBatchCategoryModalOpen(true)}
+        onDelete={requestBatchDelete}
       />
 
       {/* Action Toast (Auto-dismisses in 3 seconds) */}

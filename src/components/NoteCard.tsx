@@ -117,16 +117,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         {/* Left Side: Checkbox, Color dot, Title & preview */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {onSelect && (
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onSelect(note.id);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500/20 cursor-pointer shrink-0"
-            />
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onSelect(note.id);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500/20 cursor-pointer shrink-0"
+              />
           )}
 
           <div

@@ -8,8 +8,8 @@ import {
   LayoutGrid,
   List as ListIcon,
   Menu,
-  X,
   Lock,
+  X,
 } from 'lucide-react';
 import { ViewMode } from '../types/note';
 import { PWAInstallHeaderButton, PWAInstallBanner } from './PWAInstallBanner';
@@ -180,6 +180,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="hidden"
             />
           </button>
+
+
 
           {/* Dark Mode Toggle */}
           <button

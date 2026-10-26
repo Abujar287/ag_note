@@ -195,279 +195,195 @@ export const NoteModal: React.FC<NoteModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150"
+        className="w-full h-full sm:h-auto sm:max-h-[95vh] sm:max-w-3xl bg-white dark:bg-slate-900 sm:rounded-2xl shadow-2xl border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        {/* Modal Header: Title on left, Save/Close on right */}
+        <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
               {initialNote ? 'Edit Note' : 'Create New Note'}
             </h3>
             {isLocked && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
                 <Lock className="w-3 h-3" /> Locked
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="px-5 py-2 text-xs font-black uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            >
+              Save Note
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
-          {/* Title */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-              Title
-            </label>
-            <input
-              type="text"
-              required
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Note title (English or বাংলা)..."
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-colors"
-            />
-          </div>
-
-          {/* Category & Color Picker */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Category
+        <div className="flex-1 overflow-y-auto flex flex-col bg-white dark:bg-slate-900">
+          <div className="p-5 sm:p-6 space-y-5 flex-1 flex flex-col">
+            {/* Top Row: Name and Category */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1.5">
+                  Name / Title
                 </label>
-                <button
-                  type="button"
-                  onClick={onOpenCategoryModal}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
-                >
-                  <Plus className="w-3 h-3" /> Manage
-                </button>
-              </div>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 dark:text-slate-100 cursor-pointer"
-              >
-                <option value="Uncategorized">Uncategorized (No category)</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                Color Accent
-              </label>
-              <div className="flex items-center gap-2 pt-1">
-                {NOTE_COLORS.map((c) => {
-                  const isSelected = color === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      title={c.label}
-                      onClick={() => setColor(c.id)}
-                      className={`w-7 h-7 rounded-full ${c.bgClass} transition-transform flex items-center justify-center text-white cursor-pointer ${
-                        isSelected
-                          ? 'ring-2 ring-offset-2 ring-slate-800 dark:ring-offset-slate-900 scale-110'
-                          : 'opacity-80 hover:opacity-100 hover:scale-105'
-                      }`}
-                    >
-                      {isSelected && <span className="text-xs font-bold">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Password Protection & Lock Settings */}
-          <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
-                  type="checkbox"
-                  checked={isLocked}
-                  onChange={(e) => setIsLocked(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 rounded border-slate-300 dark:border-slate-700 focus:ring-amber-500/20 cursor-pointer"
+                  type="text"
+                  autoFocus
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Note name (optional)..."
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-colors"
                 />
-                <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <Lock className={`w-3.5 h-3.5 ${isLocked ? 'text-amber-500' : 'text-slate-400'}`} />
-                  <span>Lock this note with password</span>
-                </span>
-              </label>
-              <span className="text-[11px] text-slate-400">
-                {isLocked ? 'Hidden from view' : 'Public'}
-              </span>
-            </div>
+              </div>
 
-            {isLocked && (
-              <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-2">
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                  Custom Password (optional)
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={customPassword}
-                    onChange={(e) => setCustomPassword(e.target.value)}
-                    placeholder="Enter custom password (or leave blank for master)"
-                    className="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                  />
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                    Category
+                  </label>
                   <button
                     type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+                    onClick={onOpenCategoryModal}
+                    className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
                   >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <Plus className="w-3 h-3" /> Manage
                   </button>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>Leave blank to protect with master password. Master password can always unlock this note.</span>
-                </div>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500/50 text-slate-900 dark:text-slate-100 cursor-pointer"
+                >
+                  <option value="Uncategorized">Uncategorized</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Content with Format Toolbar & Voice Input */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Note Content
-              </label>
+            {/* Content Area - Full Width/Flex Grow */}
+            <div className="flex-1 flex flex-col min-h-[300px]">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                  Text Content
+                </label>
 
-              {/* Formatting Toolbar & Voice Input */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  title="Bold"
-                  onClick={() => insertFormatting('**', '**')}
-                  className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                >
-                  <Bold className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  title="Italic"
-                  onClick={() => insertFormatting('*', '*')}
-                  className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                >
-                  <Italic className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  title="List"
-                  onClick={() => insertFormatting('\n- ')}
-                  className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                >
-                  <List className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  title="Checklist"
-                  onClick={() => insertFormatting('\n- [ ] ')}
-                  className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                >
-                  <CheckSquare className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  title="Code"
-                  onClick={() => insertFormatting('`', '`')}
-                  className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
-                >
-                  <Code className="w-3.5 h-3.5" />
-                </button>
-
-                <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
-
-                {/* Voice Typing Button with Language Selector */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
+                {/* Toolbar */}
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => setSpeechLang(speechLang === 'en-US' ? 'bn-BD' : 'en-US')}
-                    className="text-[11px] font-semibold px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
-                    title="Switch speech language"
+                    onClick={() => insertFormatting('**', '**')}
+                    className="p-1.5 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-md transition-colors cursor-pointer"
                   >
-                    {speechLang === 'en-US' ? 'EN' : 'বাংলা'}
+                    <Bold className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('*', '*')}
+                    className="p-1.5 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-md transition-colors cursor-pointer"
+                  >
+                    <Italic className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={toggleSpeechRecognition}
-                    title={isListening ? 'Stop voice typing' : 'Start voice typing'}
-                    className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors cursor-pointer ${
+                    className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
                       isListening
                         ? 'bg-rose-500 text-white animate-pulse'
-                        : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-500'
                     }`}
                   >
-                    {isListening ? (
-                      <>
-                        <MicOff className="w-3.5 h-3.5" />
-                        <span>Listening...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="w-3.5 h-3.5 text-blue-500" />
-                        <span>Voice</span>
-                      </>
-                    )}
+                    {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    <span>{isListening ? 'STOP' : 'VOICE'}</span>
                   </button>
                 </div>
               </div>
+
+              <textarea
+                ref={contentRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your note here..."
+                className="flex-1 w-full p-4 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm sm:text-base leading-relaxed focus:outline-none focus:ring-0 focus:border-blue-500/30 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 resize-none transition-colors font-sans"
+              />
+
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 px-1">
+                <div className="flex items-center gap-3">
+                  <span>{words} words</span>
+                  <span>{chars} chars</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsLocked(!isLocked)}
+                    className={`flex items-center gap-1.5 transition-colors cursor-pointer ${isLocked ? 'text-amber-500' : 'hover:text-blue-500'}`}
+                  >
+                    <Lock className="w-3 h-3" />
+                    <span>{isLocked ? 'Locked' : 'Lock Note'}</span>
+                  </button>
+                  {/* Color shortcut dots */}
+                  <div className="flex items-center gap-1.5">
+                    {NOTE_COLORS.slice(0, 4).map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setColor(c.id)}
+                        className={`w-3 h-3 rounded-full ${c.bgClass} transition-transform ${color === c.id ? 'ring-2 ring-slate-400 ring-offset-2 dark:ring-offset-slate-900 scale-125' : 'opacity-40'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <textarea
-              ref={contentRef}
-              rows={8}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Type your note here... (Bengali বাংলা and English both supported)"
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 resize-none transition-colors"
-            />
-
-            <div className="flex justify-between items-center text-[11px] text-slate-400 mt-1">
-              <span>Supports **bold**, *italic*, - [ ] tasks</span>
-              <span className="font-mono tabular-nums">
-                {words} words · {chars} chars
-              </span>
-            </div>
+            
+            {isLocked && (
+              <div className="animate-in slide-in-from-top-2 duration-200 p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <Lock className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Password Protection</span>
+                </div>
+                <div className="relative max-w-sm">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={customPassword}
+                    onChange={(e) => setCustomPassword(e.target.value)}
+                    placeholder="Custom password (optional)"
+                    className="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-amber-600/80 dark:text-amber-500/60 mt-2 font-medium">
+                  If left blank, the master password will be used to secure this note.
+                </p>
+              </div>
+            )}
           </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl shadow-xs transition-colors cursor-pointer"
-            >
-              Save Note
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
