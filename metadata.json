@@ -1,0 +1,6 @@
+{
+  "name": "Smart Bangla Notepad - স্মার্ট নোটপ্যাড",
+  "description": "একটি আধুনিক ও দ্রুত বাংলা নোটপ্যাড অ্যাপ। নোট তৈরি, ক্যাটাগরি, ভয়েস টাইপিং, ট্র্যাশ রিকভারি ও ব্যাকআপ সুবিধা।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

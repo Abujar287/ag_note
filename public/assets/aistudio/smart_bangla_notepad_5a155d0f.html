@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>স্মার্ট নোটপ্যাড (Smart Notepad)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font (Hind Siliguri for Bangla & Inter for English) -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Hind Siliguri', 'Inter', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200 flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-md">
+                    <i class="fa-solid font-bold fa-book-bookmark text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">স্মার্ট নোটপ্যাড</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">সহজে আপনার নোট গুছিয়ে রাখুন</p>
+                </div>
+            </div>
+
+            <!-- Action Controls (Search, Backup, Theme, Add Note) -->
+            <div class="flex items-center flex-wrap gap-2 sm:gap-3">
+                <!-- Search Bar -->
+                <div class="relative flex-1 sm:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="searchInput" placeholder="খুঁজুন (টাইটেল, ট্যাগ, কনটেন্ট)..." 
+                           class="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-700 border border-transparent focus:border-blue-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition">
+                </div>
+
+                <!-- Backup & Restore Buttons -->
+                <button onclick="exportNotes()" title="ব্যাকআপ ডাউনলোড করুন (JSON)" class="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 text-xs font-semibold">
+                    <i class="fa-solid fa-download text-blue-500"></i>
+                    <span class="hidden md:inline">ব্যাকআপ</span>
+                </button>
+                <label title="রিস্টোর ফাইল আপলোড করুন" class="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                    <i class="fa-solid fa-upload text-emerald-500"></i>
+                    <span class="hidden md:inline">রিস্টোর</span>
+                    <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importNotes(event)">
+                </label>
+
+                <!-- Theme Toggle -->
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition border border-slate-200 dark:border-slate-700">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+
+                <!-- New Note Button -->
+                <button onclick="openNoteModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-md hover:shadow-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>নতুন নোট</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <div class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full flex flex-col md:flex-row gap-6">
+        
+        <!-- Sidebar Navigation & Categories -->
+        <aside class="w-full md:w-64 shrink-0 flex flex-col gap-6">
+            <!-- Categories Card -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider">ক্যাটাগরি</h2>
+                    <button onclick="openCategoryModal()" title="নতুন ক্যাটাগরি" class="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 p-1 rounded-lg text-xs font-semibold transition">
+                        <i class="fa-solid fa-plus"></i> নতুন
+                    </button>
+                </div>
+                <nav id="categoryList" class="space-y-1">
+                    <!-- Dynamic Categories inserted here -->
+                </nav>
+            </div>
+
+            <!-- Sorting & Filter Card -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-3">
+                <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider">সাজান (Sort By)</h2>
+                <select id="sortSelect" onchange="renderNotes()" class="w-full p-2 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500">
+                    <option value="newest">সর্বশেষ সংযোজিত (Newest)</option>
+                    <option value="oldest">পুরাতন প্রথম (Oldest)</option>
+                    <option value="updated">সাম্প্রতিক আপডেট (Updated)</option>
+                    <option value="title">শিরোনাম অনুযায়ী (Title)</option>
+                </select>
+            </div>
+
+            <!-- App Stats -->
+            <div class="bg-gradient-to-br from-slate-800 to-indigo-900 text-white p-4 rounded-2xl shadow-sm text-xs space-y-2">
+                <div class="flex justify-between items-center">
+                    <span>মোট নোট:</span>
+                    <span id="statTotalNotes" class="font-bold text-base text-blue-300">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span>পিন করা নোট:</span>
+                    <span id="statPinnedNotes" class="font-bold text-base text-amber-300">0</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Notes Display Area -->
+        <main class="flex-1 min-w-0">
+            <!-- Filter Header -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="currentCategoryTitle" class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-blue-500"></i> সকল নোট
+                </h2>
+                <span id="noteCountBadge" class="text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full font-semibold">0 টি নোট</span>
+            </div>
+
+            <!-- Notes Grid Container -->
+            <div id="notesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamic Note Cards Render Here -->
+            </div>
+
+            <!-- Empty State Illustration -->
+            <div id="emptyState" class="hidden flex-col items-center justify-center py-16 text-center">
+                <div class="w-24 h-24 mb-4 text-slate-300 dark:text-slate-600">
+                    <i class="fa-regular fa-folder-open text-7xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-600 dark:text-slate-300">কোন নোট পাওয়া যায়নি!</h3>
+                <p class="text-xs text-slate-400 mt-1 max-w-xs">নতুন নোট তৈরি করতে উপরের "নতুন নোট" বোতামে ক্লিক করুন।</p>
+                <button onclick="openNoteModal()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow transition">
+                    নোট লিখুন
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Box -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage">সফলভাবে সম্পন্ন হয়েছে!</span>
+    </div>
+
+    <!-- Note Add/Edit Modal -->
+    <div id="noteModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <h3 id="modalHeading" class="font-bold text-slate-800 dark:text-white text-lg">নতুন নোট যোগ করুন</h3>
+                <button onclick="closeNoteModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form Inputs -->
+            <form id="noteForm" onsubmit="saveNote(event)" class="p-6 overflow-y-auto space-y-4">
+                <input type="hidden" id="noteId">
+                
+                <!-- Title -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">শিরোনাম (Title)</label>
+                    <input type="text" id="noteTitle" required placeholder="নোটের শিরোনাম লিখুন..." 
+                           class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+
+                <!-- Category & Color Picker -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">ক্যাটাগরি</label>
+                        <select id="noteCategory" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <!-- Populated Dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">কালার ট্যাগ</label>
+                        <div class="flex items-center gap-2 pt-1" id="colorPickerContainer">
+                            <!-- Color radio buttons -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Body -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">বিস্তারিত বিবরণ (Content)</label>
+                    <textarea id="noteContent" rows="6" required placeholder="আপনার নোট এখানে লিখুন..." 
+                              class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
+                </div>
+
+                <!-- Tags -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">ট্যাগ (কম দিয়ে পৃথক করুন)</label>
+                    <input type="text" id="noteTags" placeholder="যেমন: কাজ, জরুরি, আইডিয়া" 
+                           class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                    <button type="button" onclick="closeNoteModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition">বাতিল</button>
+                    <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition">সংরক্ষণ করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Note Details Modal -->
+    <div id="viewModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
+            <div id="viewHeaderColor" class="h-3 w-full bg-blue-500"></div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span id="viewCategoryBadge" class="text-xs px-2.5 py-1 rounded-full font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">ক্যাটাগরি</span>
+                        <h2 id="viewTitle" class="text-2xl font-bold text-slate-800 dark:text-white mt-2">নোটের বিষয়বস্তু</h2>
+                        <p id="viewDate" class="text-xs text-slate-400 mt-1">তারিখ: --</p>
+                    </div>
+                    <button onclick="closeViewModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <i class="fa-solid fa-xmark text-2xl"></i>
+                    </button>
+                </div>
+
+                <div class="border-t border-b border-slate-100 dark:border-slate-700 py-4 my-2">
+                    <p id="viewContent" class="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed text-sm"></p>
+                </div>
+
+                <div id="viewTags" class="flex flex-wrap gap-1.5 pt-1">
+                    <!-- Tags rendered here -->
+                </div>
+            </div>
+            
+            <div class="bg-slate-50 dark:bg-slate-700/50 px-6 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <button id="copyBtn" onclick="copyCurrentNoteText()" class="text-xs text-slate-600 dark:text-slate-300 hover:text-blue-600 flex items-center gap-1.5 font-semibold">
+                    <i class="fa-regular fa-copy"></i> কপি করুন
+                </button>
+                <div class="flex gap-2">
+                    <button id="viewEditBtn" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700">এডিট</button>
+                    <button onclick="closeViewModal()" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium">বন্ধ করুন</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Add Modal -->
+    <div id="categoryModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+            <h3 class="font-bold text-slate-800 dark:text-white text-base">নতুন ক্যাটাগরি তৈরি</h3>
+            <form onsubmit="saveNewCategory(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase mb-1">ক্যাটাগরির নাম</label>
+                    <input type="text" id="newCategoryInput" required placeholder="যেমন: ব্যক্তিগত, পড়ালেখা" 
+                           class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeCategoryModal()" class="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300">বাতিল</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl">যোগ করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Logic Script -->
+    <script>
+        // Data Structures & State Management
+        const COLOR_OPTIONS = [
+            { name: 'Blue', bg: 'bg-blue-500', border: 'border-blue-500', cardBg: 'border-l-blue-500' },
+            { name: 'Emerald', bg: 'bg-emerald-500', border: 'border-emerald-500', cardBg: 'border-l-emerald-500' },
+            { name: 'Amber', bg: 'bg-amber-500', border: 'border-amber-500', cardBg: 'border-l-amber-500' },
+            { name: 'Rose', bg: 'bg-rose-500', border: 'border-rose-500', cardBg: 'border-l-rose-500' },
+            { name: 'Purple', bg: 'bg-purple-500', border: 'border-purple-500', cardBg: 'border-l-purple-500' }
+        ];
+
+        let state = {
+            notes: [],
+            categories: ['সাধারণ', 'ব্যক্তিগত', 'কাজ', 'আইডিয়া'],
+            activeCategory: 'all',
+            searchQuery: '',
+            selectedColor: 'bg-blue-500',
+            currentViewingNoteId: null
+        };
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            initTheme();
+            renderCategoryColorOptions();
+            renderCategories();
+            renderNotes();
+            setupSearchListener();
+        });
+
+        // Theme Toggle Handler
+        function initTheme() {
+            const isDark = localStorage.getItem('notepad_theme') === 'dark' || 
+                           (!('notepad_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-amber-400';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-slate-600';
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('notepad_theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-slate-600';
+        }
+
+        // Local Storage Handling
+        function saveToLocalStorage() {
+            localStorage.setItem('smart_notepad_notes', JSON.stringify(state.notes));
+            localStorage.setItem('smart_notepad_categories', JSON.stringify(state.categories));
+        }
+
+        function loadFromLocalStorage() {
+            const savedNotes = localStorage.getItem('smart_notepad_notes');
+            const savedCategories = localStorage.getItem('smart_notepad_categories');
+
+            if (savedNotes) {
+                state.notes = JSON.parse(savedNotes);
+            } else {
+                // Default Welcome Note
+                state.notes = [{
+                    id: 'note_' + Date.now(),
+                    title: 'স্মার্ট নোটপ্যাডে স্বাগতম! 🎉',
+                    content: 'এটি একটি আধুনিক নোটপ্যাড অ্যাপ্লিকেশন।\n\n- আপনি এখানে আপনার গুরুত্বপূর্ণ নোট রাখতে পারবেন।\n- ব্যাকআপ এবং রিস্টোর সুবিধা রয়েছে।\n- বিভিন্ন ক্যাটাগরি ও কালার ট্যাগে নোট বিভক্ত করতে পারবেন।',
+                    category: 'সাধারণ',
+                    tags: ['ওয়েলকাম', 'হেল্প'],
+                    color: 'bg-blue-500',
+                    isPinned: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }];
+            }
+
+            if (savedCategories) {
+                state.categories = JSON.parse(savedCategories);
+            }
+        }
+
+        // Category Rendering
+        function renderCategories() {
+            const container = document.getElementById('categoryList');
+            const selectCategory = document.getElementById('noteCategory');
+
+            // Nav List items
+            let navHtml = `
+                <button onclick="filterByCategory('all')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition ${state.activeCategory === 'all' ? 'bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'}">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-border-all"></i> সকল নোট</span>
+                    <span class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded-full text-[10px]">${state.notes.length}</span>
+                </button>
+            `;
+
+            state.categories.forEach(cat => {
+                const count = state.notes.filter(n => n.category === cat).length;
+                const isActive = state.activeCategory === cat;
+                navHtml += `
+                    <button onclick="filterByCategory('${cat}')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition ${isActive ? 'bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50'}">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-folder text-amber-500"></i> ${cat}</span>
+                        <span class="bg-slate-200 dark:bg-slate-600 px-2 py-0.5 rounded-full text-[10px]">${count}</span>
+                    </button>
+                `;
+            });
+
+            container.innerHTML = navHtml;
+
+            // Form Category dropdown
+            selectCategory.innerHTML = state.categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        }
+
+        function filterByCategory(cat) {
+            state.activeCategory = cat;
+            document.getElementById('currentCategoryTitle').innerHTML = cat === 'all' 
+                ? `<i class="fa-solid fa-layer-group text-blue-500"></i> সকল নোট` 
+                : `<i class="fa-solid fa-folder-open text-amber-500"></i> ${cat}`;
+            renderCategories();
+            renderNotes();
+        }
+
+        // Category Creation
+        function openCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('categoryModal').classList.remove('opacity-0'), 10);
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.add('opacity-0');
+            setTimeout(() => document.getElementById('categoryModal').classList.add('hidden'), 200);
+            document.getElementById('newCategoryInput').value = '';
+        }
+
+        function saveNewCategory(e) {
+            e.preventDefault();
+            const val = document.getElementById('newCategoryInput').value.trim();
+            if (val && !state.categories.includes(val)) {
+                state.categories.push(val);
+                saveToLocalStorage();
+                renderCategories();
+                closeCategoryModal();
+                showToast('নতুন ক্যাটাগরি যুক্ত করা হয়েছে!');
+            }
+        }
+
+        // Color Picker radio choices
+        function renderCategoryColorOptions() {
+            const container = document.getElementById('colorPickerContainer');
+            container.innerHTML = COLOR_OPTIONS.map((c, idx) => `
+                <button type="button" onclick="selectColor('${c.bg}')" class="w-6 h-6 rounded-full ${c.bg} transition-transform transform hover:scale-110 flex items-center justify-center text-white text-xs" id="colorOpt_${c.bg}">
+                    ${idx === 0 ? '<i class="fa-solid fa-check"></i>' : ''}
+                </button>
+            `).join('');
+            state.selectedColor = COLOR_OPTIONS[0].bg;
+        }
+
+        function selectColor(colorBg) {
+            state.selectedColor = colorBg;
+            COLOR_OPTIONS.forEach(c => {
+                const btn = document.getElementById(`colorOpt_${c.bg}`);
+                if (btn) btn.innerHTML = c.bg === colorBg ? '<i class="fa-solid fa-check"></i>' : '';
+            });
+        }
+
+        // Search Filter Listener
+        function setupSearchListener() {
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                state.searchQuery = e.target.value.toLowerCase();
+                renderNotes();
+            });
+        }
+
+        // Main Render Notes Engine
+        function renderNotes() {
+            const container = document.getElementById('notesGrid');
+            const emptyState = document.getElementById('emptyState');
+            const sortMode = document.getElementById('sortSelect').value;
+
+            // Filter logic
+            let filtered = state.notes.filter(note => {
+                const matchesCat = state.activeCategory === 'all' || note.category === state.activeCategory;
+                const matchesSearch = note.title.toLowerCase().includes(state.searchQuery) || 
+                                      note.content.toLowerCase().includes(state.searchQuery) ||
+                                      (note.tags && note.tags.some(t => t.toLowerCase().includes(state.searchQuery)));
+                return matchesCat && matchesSearch;
+            });
+
+            // Sort logic
+            filtered.sort((a, b) => {
+                // Pinned notes priority
+                if (a.isPinned !== b.isPinned) return b.isPinned ? 1 : -1;
+
+                if (sortMode === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+                if (sortMode === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+                if (sortMode === 'updated') return new Date(b.updatedAt) - new Date(a.updatedAt);
+                if (sortMode === 'title') return a.title.localeCompare(b.title);
+                return 0;
+            });
+
+            // Update Badges & Stats
+            document.getElementById('noteCountBadge').innerText = `${filtered.length} টি নোট`;
+            document.getElementById('statTotalNotes').innerText = state.notes.length;
+            document.getElementById('statPinnedNotes').innerText = state.notes.filter(n => n.isPinned).length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+            }
+
+            // Cards Construction
+            container.innerHTML = filtered.map(note => {
+                const formattedDate = new Date(note.createdAt).toLocaleDateString('bn-BD', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                return `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md border border-slate-200 dark:border-slate-700 border-l-4 ${note.color.replace('bg-', 'border-l-')} flex flex-col justify-between transition group relative">
+                        <!-- Top Row: Category & Pin -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                    ${note.category}
+                                </span>
+                                <button onclick="togglePinNote('${note.id}')" title="${note.isPinned ? 'আনপিন করুন' : 'পিন করুন'}" class="text-slate-400 hover:text-amber-500 transition">
+                                    <i class="fa-solid fa-thumbtack ${note.isPinned ? 'text-amber-500 rotate-45' : ''}"></i>
+                                </button>
+                            </div>
+
+                            <!-- Title -->
+                            <h3 onclick="viewNoteDetails('${note.id}')" class="font-bold text-slate-800 dark:text-white text-base mb-1.5 line-clamp-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition">
+                                ${escapeHtml(note.title)}
+                            </h3>
+
+                            <!-- Preview Text -->
+                            <p onclick="viewNoteDetails('${note.id}')" class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 mb-4 cursor-pointer leading-relaxed">
+                                ${escapeHtml(note.content)}
+                            </p>
+                        </div>
+
+                        <!-- Footer Info & Actions -->
+                        <div>
+                            <!-- Tags -->
+                            ${note.tags && note.tags.length ? `
+                                <div class="flex flex-wrap gap-1 mb-3">
+                                    ${note.tags.map(t => `<span class="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">#${escapeHtml(t)}</span>`).join('')}
+                                </div>
+                            ` : ''}
+
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60 text-[11px] text-slate-400">
+                                <span><i class="fa-regular fa-clock"></i> ${formattedDate}</span>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="editNote('${note.id}')" title="সম্পাদনা" class="p-1 hover:text-blue-600 dark:hover:text-blue-400 transition">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="deleteNote('${note.id}')" title="মুছে ফেলুন" class="p-1 hover:text-rose-600 dark:hover:text-rose-400 transition">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Modal Controls for Note Add/Edit
+        function openNoteModal(isEdit = false) {
+            const modal = document.getElementById('noteModal');
+            document.getElementById('modalHeading').innerText = isEdit ? 'নোট সম্পাদনা করুন' : 'নতুন নোট যোগ করুন';
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeNoteModal() {
+            const modal = document.getElementById('noteModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.getElementById('noteForm').reset();
+                document.getElementById('noteId').value = '';
+                selectColor(COLOR_OPTIONS[0].bg);
+            }, 200);
+        }
+
+        // Save / Update Note Action
+        function saveNote(e) {
+            e.preventDefault();
+            const id = document.getElementById('noteId').value;
+            const title = document.getElementById('noteTitle').value.trim();
+            const category = document.getElementById('noteCategory').value;
+            const content = document.getElementById('noteContent').value.trim();
+            const tagsInput = document.getElementById('noteTags').value.trim();
+            
+            const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+            if (id) {
+                // Update Existing
+                const index = state.notes.findIndex(n => n.id === id);
+                if (index !== -1) {
+                    state.notes[index] = {
+                        ...state.notes[index],
+                        title,
+                        category,
+                        content,
+                        tags,
+                        color: state.selectedColor,
+                        updatedAt: new Date().toISOString()
+                    };
+                    showToast('নোট আপডেট করা হয়েছে!');
+                }
+            } else {
+                // Add New
+                const newNote = {
+                    id: 'note_' + Date.now(),
+                    title,
+                    category,
+                    content,
+                    tags,
+                    color: state.selectedColor,
+                    isPinned: false,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                state.notes.unshift(newNote);
+                showToast('নতুন নোট যোগ করা হয়েছে!');
+            }
+
+            saveToLocalStorage();
+            renderCategories();
+            renderNotes();
+            closeNoteModal();
+        }
+
+        // Edit Note Pre-fill
+        function editNote(id) {
+            const note = state.notes.find(n => n.id === id);
+            if (!note) return;
+
+            document.getElementById('noteId').value = note.id;
+            document.getElementById('noteTitle').value = note.title;
+            document.getElementById('noteCategory').value = note.category;
+            document.getElementById('noteContent').value = note.content;
+            document.getElementById('noteTags').value = note.tags ? note.tags.join(', ') : '';
+            selectColor(note.color || COLOR_OPTIONS[0].bg);
+
+            openNoteModal(true);
+        }
+
+        // Delete Note
+        function deleteNote(id) {
+            if (confirm('আপনি কি নিশ্চিত যে এই নোটটি মুছে ফেলতে চান?')) {
+                state.notes = state.notes.filter(n => n.id !== id);
+                saveToLocalStorage();
+                renderCategories();
+                renderNotes();
+                showToast('নোট মুছে ফেলা হয়েছে!');
+            }
+        }
+
+        // Pin Toggle
+        function togglePinNote(id) {
+            const index = state.notes.findIndex(n => n.id === id);
+            if (index !== -1) {
+                state.notes[index].isPinned = !state.notes[index].isPinned;
+                saveToLocalStorage();
+                renderNotes();
+                showToast(state.notes[index].isPinned ? 'নোট পিন করা হয়েছে!' : 'নোট আনপিন করা হয়েছে!');
+            }
+        }
+
+        // View Note Modal Details
+        function viewNoteDetails(id) {
+            const note = state.notes.find(n => n.id === id);
+            if (!note) return;
+
+            state.currentViewingNoteId = id;
+            document.getElementById('viewHeaderColor').className = `h-3 w-full ${note.color}`;
+            document.getElementById('viewTitle').innerText = note.title;
+            document.getElementById('viewCategoryBadge').innerText = note.category;
+            document.getElementById('viewContent').innerText = note.content;
+            
+            const dateStr = new Date(note.createdAt).toLocaleString('bn-BD', {
+                day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            document.getElementById('viewDate').innerText = `তৈরি: ${dateStr}`;
+
+            const tagsContainer = document.getElementById('viewTags');
+            tagsContainer.innerHTML = (note.tags || []).map(t => `<span class="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md">#${escapeHtml(t)}</span>`).join('');
+
+            document.getElementById('viewEditBtn').onclick = () => {
+                closeViewModal();
+                editNote(id);
+            };
+
+            const viewModal = document.getElementById('viewModal');
+            viewModal.classList.remove('hidden');
+            setTimeout(() => viewModal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeViewModal() {
+            const viewModal = document.getElementById('viewModal');
+            viewModal.classList.add('opacity-0');
+            setTimeout(() => viewModal.classList.add('hidden'), 200);
+        }
+
+        function copyCurrentNoteText() {
+            const note = state.notes.find(n => n.id === state.currentViewingNoteId);
+            if (note) {
+                const textToCopy = `${note.title}\n\n${note.content}`;
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = textToCopy;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempTextArea);
+                showToast('লেখা কপি করা হয়েছে!');
+            }
+        }
+
+        // Backup & Restore Engine (Export/Import JSON)
+        function exportNotes() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                notes: state.notes,
+                categories: state.categories,
+                exportedAt: new Date().toISOString()
+            }, null, 2));
+            
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `notepad_backup_${new Date().toISOString().slice(0, 10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('ব্যাকআপ ডাউনলোড সম্পন্ন হয়েছে!');
+        }
+
+        function importNotes(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.notes && Array.isArray(data.notes)) {
+                        state.notes = data.notes;
+                        if (data.categories && Array.isArray(data.categories)) {
+                            state.categories = Array.from(new Set([...state.categories, ...data.categories]));
+                        }
+                        saveToLocalStorage();
+                        renderCategories();
+                        renderNotes();
+                        showToast('নোটস সফলভাবে রিস্টোর করা হয়েছে!');
+                    } else {
+                        showToast('অবৈধ ফাইল ফরম্যাট!', true);
+                    }
+                } catch (err) {
+                    showToast('ফাইল পড়তে সমস্যা হয়েছে!', true);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        // Helper Utilities
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.innerText = message;
+            toastIcon.className = isError 
+                ? 'fa-solid fa-circle-exclamation text-rose-400 text-lg' 
+                : 'fa-solid fa-circle-check text-emerald-400 text-lg';
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;")
+                       .replace(/</g, "&lt;")
+                       .replace(/>/g, "&gt;")
+                       .replace(/"/g, "&quot;")
+                       .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
