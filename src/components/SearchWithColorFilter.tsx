@@ -76,11 +76,20 @@ export const SearchWithColorFilter: React.FC<SearchWithColorFilterProps> = ({
 
   return (
     <div className="relative w-full" ref={containerRef}>
-      {/* Search Bar Container - Clicking anywhere on this bar opens the color options underneath */}
+      {/* Search Bar Container - Clicking anywhere on this bar opens the color options underneath, or toggles closed if search is empty */}
       <div
         onClick={() => {
-          setIsOpen(true);
+          if (!searchQuery && isOpen) {
+            setIsOpen(false);
+          } else {
+            setIsOpen(true);
+          }
           inputRef.current?.focus();
+        }}
+        onDoubleClick={() => {
+          if (!searchQuery) {
+            setIsOpen(false);
+          }
         }}
         className={`relative flex items-center w-full bg-[#12211A] border transition-all rounded-xl cursor-text ${
           isOpen
@@ -119,7 +128,11 @@ export const SearchWithColorFilter: React.FC<SearchWithColorFilterProps> = ({
           onFocus={() => setIsOpen(true)}
           onClick={(e) => {
             e.stopPropagation();
-            setIsOpen(true);
+            if (!searchQuery && isOpen) {
+              setIsOpen(false);
+            } else {
+              setIsOpen(true);
+            }
           }}
           placeholder={activeSwatch ? 'Search notes in selected color...' : placeholder}
           className={`w-full py-2 bg-transparent text-xs text-[#F0F7F4] placeholder-[#8DA89B] focus:outline-none ${
@@ -178,10 +191,10 @@ export const SearchWithColorFilter: React.FC<SearchWithColorFilterProps> = ({
       {/* Dropdown Tray: Direct Visual Colors Right Underneath the Search Bar */}
       {isOpen && (
         <div
-          className="absolute left-0 right-0 top-full mt-2 z-50 bg-[#162920] border border-[#2D4A3D] rounded-2xl shadow-2xl p-2.5 sm:p-3 animate-in fade-in slide-in-from-top-1 duration-150"
+          className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#162920] border border-[#2D4A3D] rounded-2xl shadow-2xl p-2 sm:p-2.5 animate-in fade-in slide-in-from-top-1 duration-150"
         >
           {/* Header Row */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#2D4A3D]/70 text-[11px] font-bold text-[#8DA89B]">
+          <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#2D4A3D]/70 text-[11px] font-bold text-[#8DA89B]">
             <span className="flex items-center gap-1.5 text-[#F0F7F4]">
               <Palette className="w-3.5 h-3.5 text-[#D4AF37]" />
               <span>রঙ দিয়ে ফিল্টার করুন</span>
@@ -200,8 +213,8 @@ export const SearchWithColorFilter: React.FC<SearchWithColorFilterProps> = ({
             )}
           </div>
 
-          {/* Direct Visual Color Swatches Row (No English names!) */}
-          <div className="flex items-center justify-between gap-1.5 sm:gap-2 px-1 py-1 overflow-x-auto no-scrollbar">
+          {/* Direct Visual Color Swatches Row - Compact to fit all items without horizontal scrolling */}
+          <div className="flex items-center justify-between gap-1 px-0.5 py-0.5 w-full">
             {/* "All Notes" (সকল নোট) circle */}
             <button
               type="button"
@@ -212,21 +225,21 @@ export const SearchWithColorFilter: React.FC<SearchWithColorFilterProps> = ({
                 handleSelectColor(null);
               }}
               title="সকল নোট (All Notes)"
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md shrink-0 border ${
+              className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm shrink-0 border ${
                 activeColor === null
-                  ? 'bg-[#D4AF37]/20 border-[#D4AF37] ring-2 ring-[#D4AF37] scale-105'
+                  ? 'bg-[#D4AF37]/25 border-[#D4AF37] ring-2 ring-[#D4AF37] scale-105'
                   : 'bg-[#12211A] border-[#2D4A3D] hover:border-[#8DA89B] opacity-80 hover:opacity-100'
               }`}
             >
               {/* Rainbow multi-dot icon representing all colors */}
               <div className="flex flex-col items-center justify-center gap-0.5">
                 <div className="flex items-center gap-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                  <span className="w-1 h-1 rounded-full bg-[#3B82F6]" />
+                  <span className="w-1 h-1 rounded-full bg-[#10B981]" />
                 </div>
                 <div className="flex items-center gap-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#F43F5E]" />
+                  <span className="w-1 h-1 rounded-full bg-[#F59E0B]" />
+                  <span className="w-1 h-1 rounded-full bg-[#F43F5E]" />
                 </div>
               </div>
             </button>
@@ -246,16 +259,16 @@ export const SearchWithColorFilter: React.FC<SearchWithColorFilterProps> = ({
                     e.preventDefault();
                     handleSelectColor(isSelected ? null : swatch.id);
                   }}
-                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md shrink-0 ${
+                  className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-sm shrink-0 ${
                     isSelected
-                      ? 'ring-3 ring-white ring-offset-2 ring-offset-[#162920] scale-110 shadow-lg'
+                      ? 'ring-2 sm:ring-3 ring-white ring-offset-2 ring-offset-[#162920] scale-110 shadow-md'
                       : 'hover:scale-110 opacity-90 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: swatch.hex }}
                   title={isSelected ? 'ফিল্টার বন্ধ করতে ক্লিক করুন' : 'এই রঙের নোট ফিল্টার করুন'}
                 >
                   {isSelected && (
-                    <Check className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[3] drop-shadow-md" />
+                    <Check className="w-3 h-3 text-white stroke-[3] drop-shadow-md" />
                   )}
                 </button>
               );

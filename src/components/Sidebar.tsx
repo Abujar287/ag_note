@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import {
   Layers,
   Folder,
@@ -6,18 +6,12 @@ import {
   Trash2,
   Pin,
   X,
-  FileText,
-  Download,
-  Upload,
   Edit2,
   HelpCircle,
   Lock,
   Settings,
-  Smartphone,
-  RefreshCw,
 } from 'lucide-react';
 import { SortMode } from '../types/note';
-import { usePWAInstall } from '../utils/usePWAInstall';
 
 interface SidebarProps {
   categories: string[];
@@ -37,8 +31,10 @@ interface SidebarProps {
   onChangeSort: (mode: SortMode) => void;
   onExportNotes?: () => void;
   onImportNotes?: (file: File) => void;
-  isMobileOpen: boolean;
-  onCloseMobile: () => void;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   onOpenSettings?: () => void;
 }
 
@@ -58,47 +54,53 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteCategory,
   onToggleTrashView,
   onChangeSort,
-  onExportNotes,
-  onImportNotes,
   isMobileOpen,
   onCloseMobile,
+  isOpen,
+  onClose,
   onOpenSettings,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isInstallable, isInstalled, install } = usePWAInstall();
+  const isMenuOpen = isOpen !== undefined ? isOpen : (isMobileOpen ?? true);
+  const handleClose = () => {
+    if (onClose) onClose();
+    else if (onCloseMobile) onCloseMobile();
+  };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && onImportNotes) {
-      onImportNotes(file);
-      e.target.value = '';
-      onCloseMobile();
+  const closeIfMobile = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      handleClose();
     }
   };
 
   return (
     <>
       {/* Mobile backdrop */}
-      {isMobileOpen && (
+      {isMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/50 md:hidden backdrop-blur-xs"
-          onClick={onCloseMobile}
+          className="fixed inset-0 z-40 bg-black/60 md:hidden backdrop-blur-xs transition-opacity"
+          onClick={handleClose}
         />
       )}
 
+      {/* Sidebar container - Collapsible on ALL screens */}
       <aside
-        className={`fixed md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-96px)] inset-y-0 left-0 z-40 w-64 max-w-[80vw] shrink-0 bg-[var(--bg-card)] border-r border-[var(--border)] md:border-r-0 md:bg-transparent p-4 md:p-0 flex flex-col gap-4 overflow-y-auto transition-transform duration-200 ease-in-out ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        className={`fixed md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-96px)] inset-y-0 left-0 z-40 w-64 max-w-[85vw] md:max-w-none shrink-0 bg-[#14241D] md:bg-transparent border-r border-[#2D4A3D] md:border-r-0 p-4 md:p-0 flex flex-col gap-4 overflow-y-auto transition-all duration-200 ease-in-out shadow-2xl md:shadow-none ${
+          isMenuOpen ? 'translate-x-0 md:block md:w-64' : '-translate-x-full md:hidden'
         }`}
       >
-        {/* Mobile Header */}
-        <div className="flex md:hidden items-center justify-between pb-3 border-b border-[var(--border)]">
-          <span className="font-bold text-sm text-[var(--text-primary)]">Menu & Filters</span>
+        {/* Sidebar Header with Close / Hide Menu button for ALL screens */}
+        <div className="flex items-center justify-between pb-3 border-b border-[#2D4A3D]">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#D4AF37]" />
+            <span className="font-bold text-xs uppercase tracking-wider text-[#F0F7F4]">Menu & Categories</span>
+          </div>
           <button
-            onClick={onCloseMobile}
-            className="p-1 rounded-lg text-[var(--text-primary)]/70 hover:text-[var(--text-primary)] cursor-pointer"
+            type="button"
+            onClick={handleClose}
+            className="p-1 rounded-lg text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] transition-colors cursor-pointer"
+            title="মেনু লুকান (Hide Menu)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -110,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => {
               onToggleTrashView(false);
               onSelectCategory('all');
-              onCloseMobile();
+              closeIfMobile();
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'all'
@@ -134,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => {
               onToggleTrashView(false);
               onSelectCategory('pinned');
-              onCloseMobile();
+              closeIfMobile();
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'pinned'
@@ -157,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => {
               onToggleTrashView(false);
               onSelectCategory('uncategorized');
-              onCloseMobile();
+              closeIfMobile();
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'uncategorized'
@@ -180,7 +182,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => {
               onToggleTrashView(false);
               onSelectCategory('locked');
-              onCloseMobile();
+              closeIfMobile();
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'locked'
@@ -202,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             onClick={() => {
               onToggleTrashView(true);
-              onCloseMobile();
+              closeIfMobile();
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               isTrashView
@@ -229,7 +231,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 } else {
                   window.dispatchEvent(new CustomEvent('openSettings'));
                 }
-                onCloseMobile();
+                closeIfMobile();
               }}
               className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer text-[#D4AF37] hover:bg-[#D4AF37]/15 active:scale-98"
             >
@@ -269,7 +271,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => {
                     onToggleTrashView(false);
                     onSelectCategory(cat);
-                    onCloseMobile();
+                    closeIfMobile();
                   }}
                   className={`group/cat w-full flex items-center justify-between px-2.5 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
                     isActive
@@ -317,30 +319,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Mobile PWA Install Button (If not installed) */}
-        {!isInstalled && (
-          <button
-            type="button"
-            onClick={async () => {
-              if (isInstallable) {
-                await install();
-              } else {
-                window.dispatchEvent(new CustomEvent('open-pwa-guide'));
-              }
-              onCloseMobile();
-            }}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#162920] hover:bg-[#1f3b2d] border border-[#D4AF37]/50 rounded-2xl text-xs font-bold text-[#D4AF37] transition-all cursor-pointer shadow-xs active:scale-98"
-          >
-            <span className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-[#D4AF37]" />
-              <span>মোবাইলে অ্যাপ ইনস্টল করুন</span>
-            </span>
-            <span className="text-[10px] text-[#10B981] font-bold bg-[#10B981]/15 px-2 py-0.5 rounded-full">
-              PWA
-            </span>
-          </button>
-        )}
-
         {/* Sort Controls */}
         <div className="bg-[#162920] p-3 rounded-2xl border border-[#2D4A3D] shadow-xs space-y-1.5">
           <label className="block text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.2em] px-1">
@@ -358,102 +336,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </select>
         </div>
 
-        {/* Mobile Backup & Restore Section */}
-        {onExportNotes && onImportNotes && (
-          <div className="md:hidden bg-[#162920] p-3 rounded-2xl border border-[#2D4A3D] shadow-xs space-y-2">
-            <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.2em] px-1">
-              Backup & Restore
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  onExportNotes();
-                  onCloseMobile();
-                }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-[#12211A] hover:bg-[#1a3327] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-medium transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>Backup</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-[#12211A] hover:bg-[#1a3327] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-medium transition-colors cursor-pointer"
-              >
-                <Upload className="w-3.5 h-3.5 text-[#10B981]" />
-                <span>Restore</span>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".json"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Quick App Stats */}
-        <div className="bg-[#12211A] text-[#F0F7F4] p-3.5 rounded-2xl shadow-xs text-xs space-y-2 border border-[#2D4A3D]">
-          <div className="flex items-center justify-between">
-            <span className="text-[#8DA89B] flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-[#D4AF37]" /> Total Notes
-            </span>
-            <span className="font-bold text-sm font-mono tabular-nums text-[#F0F7F4]">
-              {totalNotesCount}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#8DA89B] flex items-center gap-1.5">
-              <Pin className="w-3.5 h-3.5 text-[#D4AF37]" /> Pinned
-            </span>
-            <span className="font-bold text-sm font-mono tabular-nums text-[#D4AF37]">
-              {pinnedNotesCount}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#8DA89B] flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-[#D4AF37]" /> Locked
-            </span>
-            <span className="font-bold text-sm font-mono tabular-nums text-[#D4AF37]">
-              {lockedNotesCount}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[#8DA89B] flex items-center gap-1.5">
-              <Trash2 className="w-3.5 h-3.5 text-rose-400" /> In Trash
-            </span>
-            <span className="font-bold text-sm font-mono tabular-nums text-rose-300">
-              {trashNotesCount}
-            </span>
-          </div>
-          <div className="pt-2 border-t border-[#2D4A3D] mt-2 flex items-center justify-between text-[11px] text-[#8DA89B]">
-            <span className="flex items-center gap-1.5 text-[#10B981] font-semibold">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-              <span>Auto-Update Active</span>
-            </span>
-            <span className="font-mono text-[10px] text-[#D4AF37] bg-[#162920] px-2 py-0.5 rounded border border-[#2D4A3D]">
-              GitHub Auto-Sync
-            </span>
-          </div>
+        {/* GitHub Auto-Sync & Version Status Footer */}
+        <div className="bg-[#12211A] text-[#8DA89B] p-2.5 rounded-xl text-[11px] border border-[#2D4A3D] flex items-center justify-between mt-auto">
+          <span className="flex items-center gap-1.5 text-[#10B981] font-semibold">
+            <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+            <span>Auto-Update Active</span>
+          </span>
+          <span className="font-mono text-[10px] text-[#D4AF37] bg-[#162920] px-2 py-0.5 rounded border border-[#2D4A3D]">
+            GitHub Sync
+          </span>
         </div>
-
-        {/* Settings Button at the bottom of Menu Tab */}
-        {onOpenSettings && (
-          <button
-            type="button"
-            onClick={() => {
-              onOpenSettings();
-              if (isMobileOpen) onCloseMobile();
-            }}
-            className="w-full flex items-center justify-center gap-2.5 py-3 px-4 bg-[#162920] hover:bg-[#1F392B] border border-[#2D4A3D] hover:border-[#D4AF37] text-[#F0F7F4] rounded-2xl text-xs font-bold transition-all cursor-pointer shadow-md active:scale-98"
-          >
-            <Settings className="w-4 h-4 text-[#D4AF37]" />
-            <span>সেটিংস (Settings)</span>
-          </button>
-        )}
       </aside>
     </>
   );

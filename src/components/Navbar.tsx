@@ -22,12 +22,14 @@ interface NavbarProps {
   onOpenNewNote?: () => void;
   onExportNotes: () => void;
   onImportNotes: (file: File) => void;
-  onToggleMobileMenu: () => void;
+  onToggleMobileMenu?: () => void;
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
   unlockedCount?: number;
   onLockAll?: () => void;
   activeColorFilter: string | null;
   onColorFilterChange: (color: string | null) => void;
-  onOpenSettings: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,6 +41,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onExportNotes,
   onImportNotes,
   onToggleMobileMenu,
+  isSidebarOpen = true,
+  onToggleSidebar,
   unlockedCount = 0,
   onLockAll,
   activeColorFilter,
@@ -55,19 +59,29 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const handleToggleMenu = () => {
+    if (onToggleSidebar) onToggleSidebar();
+    else if (onToggleMobileMenu) onToggleMobileMenu();
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full bg-[#162920]/95 backdrop-blur-md border-b border-[#2D4A3D] shadow-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-4">
         {/* Main Header Bar */}
         <div className="h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-          {/* Left: Mobile Menu Toggle, AG Logo & App Title */}
+          {/* Left: Menu Toggle for ALL Screens, AG Logo & App Title */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Mobile Sidebar Hamburger */}
+            {/* Sidebar Toggle for ALL Screens (Desktop, Tablet & Mobile) */}
             <button
               type="button"
-              onClick={onToggleMobileMenu}
-              className="p-2 md:hidden text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-xl transition-colors cursor-pointer"
-              aria-label="Open Menu"
+              onClick={handleToggleMenu}
+              className={`p-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
+                isSidebarOpen
+                  ? 'text-[#D4AF37] bg-[#244234] hover:bg-[#2d5240] ring-1 ring-[#D4AF37]/30'
+                  : 'text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234]'
+              }`}
+              title={isSidebarOpen ? "মেনু লুকান (Hide Menu)" : "মেনু দেখান (Show Menu)"}
+              aria-label={isSidebarOpen ? "Hide Menu" : "Show Menu"}
             >
               <Menu className="w-5 h-5" />
             </button>

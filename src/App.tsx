@@ -145,7 +145,22 @@ export default function App() {
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
   const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState<boolean>(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('smart_notepad_sidebar_open');
+      if (saved !== null) return saved === 'true';
+      return window.innerWidth >= 768;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('smart_notepad_sidebar_open', String(isSidebarOpen));
+    } catch { /* ignore */ }
+  }, [isSidebarOpen]);
+
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
 
   const [passwordModal, setPasswordModal] = useState<{
@@ -387,6 +402,20 @@ export default function App() {
     }
   };
 
+  const handleDeleteCategory = (catName: string) => {
+    setCategories(prev => prev.filter(c => c !== catName));
+    setNotes(prev => prev.map(n => n.category === catName ? { ...n, category: 'Uncategorized' } : n));
+    if (activeCategory === catName) setActiveCategory('all');
+    showToast(`Category "${catName}" deleted`);
+  };
+
+  const handleRenameCategory = (oldName: string, newName: string) => {
+    setCategories(prev => prev.map(c => c === oldName ? newName : c));
+    setNotes(prev => prev.map(n => n.category === oldName ? { ...n, category: newName } : n));
+    if (activeCategory === oldName) setActiveCategory(newName);
+    showToast('Category renamed');
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#14241D] text-[#F0F7F4] flex flex-col">
       <Navbar
@@ -399,7 +428,9 @@ export default function App() {
         onOpenNewNote={() => { setEditingNote(null); setIsNoteModalOpen(true); }}
         onExportNotes={handleExportNotes}
         onImportNotes={handleImportNotes}
-        onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+        onToggleMobileMenu={() => setIsSidebarOpen(prev => !prev)}
         unlockedCount={unlockedNoteIds.size}
         onLockAll={handleLockAll}
         activeColorFilter={activeColorFilter}
@@ -421,13 +452,15 @@ export default function App() {
           sortMode={sortMode}
           onSelectCategory={(cat) => { setActiveCategory(cat); setSelectedNoteIds([]); }}
           onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
-          onDeleteCategory={() => {}}
+          onDeleteCategory={handleDeleteCategory}
           onToggleTrashView={setIsTrashView}
           onChangeSort={setSortMode}
           onExportNotes={handleExportNotes}
           onImportNotes={handleImportNotes}
-          isMobileOpen={isMobileMenuOpen}
-          onCloseMobile={() => setIsMobileMenuOpen(false)}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          isMobileOpen={isSidebarOpen}
+          onCloseMobile={() => setIsSidebarOpen(false)}
           onOpenSettings={() => setIsSettingsModalOpen(true)}
         />
 
@@ -550,8 +583,8 @@ export default function App() {
         existingCategories={categories}
         categoryCounts={categoryCounts}
         onAddCategory={handleAddCategory}
-        onRenameCategory={() => {}}
-        onDeleteCategory={() => {}}
+        onRenameCategory={handleRenameCategory}
+        onDeleteCategory={handleDeleteCategory}
         onClose={() => setIsCategoryModalOpen(false)}
       />
 
