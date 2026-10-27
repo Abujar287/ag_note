@@ -125,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <option value="">All</option>
             {NOTE_COLORS.map(c => (
-                <option key={c.id} value={c.id}>{c.label}</option>
+                <option key={c.id} value={c.id}>● {c.label}</option>
             ))}
           </select>
         </div>
@@ -226,7 +226,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <option value="">All</option>
           {NOTE_COLORS.map(c => (
-              <option key={c.id} value={c.id}>{c.label}</option>
+              <option key={c.id} value={c.id}>● {c.label}</option>
           ))}
         </select>
       </div>

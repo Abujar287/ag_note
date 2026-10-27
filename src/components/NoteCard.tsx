@@ -106,12 +106,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     return (
       <div
         onClick={handleCardClick}
-        className={`group relative flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border bg-white transition-all cursor-pointer hover:shadow-xs ${
+        className={`group relative flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-pointer hover:shadow-xs ${
           isLockedActive
-            ? 'border-amber-400 bg-amber-50/20'
+            ? 'border-[var(--accent-gold)] bg-[var(--accent-gold)]/10'
             : isSelected
-            ? 'border-black bg-black/5 ring-1 ring-black'
-            : 'border-black/10 hover:border-black/30'
+            ? 'border-[var(--accent-gold)] bg-[var(--accent-gold)]/20 ring-1 ring-[var(--accent-gold)]'
+            : 'border-[var(--border)] hover:border-[var(--accent-gold)]'
         }`}
       >
         {/* Left Side: Checkbox, Color dot, Title & preview */}
@@ -125,36 +125,36 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   onSelect(note.id);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500/20 cursor-pointer shrink-0"
+                className="w-4 h-4 rounded text-[var(--accent-gold)] focus:ring-[var(--accent-gold)]/20 cursor-pointer shrink-0"
               />
           )}
 
           <div
             className={`w-2 h-2 rounded-full shrink-0 ${
-              isLockedActive ? 'bg-amber-500' : colorConfig.dotClass
+              isLockedActive ? 'bg-[var(--accent-gold)]' : colorConfig.dotClass
             }`}
           />
 
           {/* Title / Locked state */}
           {isLockedActive ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400">
+              <Lock className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
+              <span className="text-xs sm:text-sm font-bold text-[var(--accent-gold)]">
                 Locked
               </span>
-              <span className="text-xs text-slate-400 font-mono hidden lg:inline-block">
+              <span className="text-xs text-[var(--text-primary)]/50 font-mono hidden lg:inline-block">
                 — Enter password to view
               </span>
             </div>
           ) : (
             <>
-              <h3 className="text-xs sm:text-sm font-bold text-black truncate group-hover:text-blue-600 transition-colors min-w-0 max-w-[130px] sm:max-w-[240px]">
+              <h3 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate group-hover:text-[var(--accent-gold)] transition-colors min-w-0 max-w-[130px] sm:max-w-[240px]">
                 {note.title}
               </h3>
 
               {/* 1st Line preview only */}
               {firstLine && (
-                <span className="text-xs text-black/60 truncate hidden lg:inline-block flex-1 min-w-0">
+                <span className="text-xs text-[var(--text-primary)]/60 truncate hidden lg:inline-block flex-1 min-w-0">
                   — {firstLine}
                 </span>
               )}
@@ -162,7 +162,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           )}
 
           {note.isPinned && (
-            <Pin className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
+            <Pin className="w-3 h-3 text-[var(--accent-gold)] fill-[var(--accent-gold)] shrink-0" />
           )}
         </div>
 
@@ -170,13 +170,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Optional Category tag if not Uncategorized */}
           {note.category && note.category !== 'Uncategorized' && (
-            <span className="font-bold text-[10px] text-black/60 uppercase tracking-widest hidden xl:inline bg-black/5 px-2 py-0.5 rounded">
+            <span className="font-bold text-[10px] text-[var(--text-primary)]/60 uppercase tracking-widest hidden xl:inline bg-[var(--border)] px-2 py-0.5 rounded">
               {note.category}
             </span>
           )}
 
           {/* Datetime */}
-          <span className="font-mono tabular-nums text-[10px] font-bold text-black/40 shrink-0">
+          <span className="font-mono tabular-nums text-[10px] font-bold text-[var(--text-primary)]/40 shrink-0">
             {formatDate(note.createdAt)}
           </span>
 
@@ -187,9 +187,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               type="button"
               onClick={handlePin}
               title={note.isPinned ? 'Unpin note' : 'Pin note'}
-              className="p-1 text-black/30 hover:text-amber-500 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+              className="p-1 text-[var(--text-primary)]/40 hover:text-[var(--accent-gold)] rounded-md hover:bg-[var(--border)] transition-colors cursor-pointer"
             >
-              <Pin className={`w-3.5 h-3.5 ${note.isPinned ? 'text-amber-500 fill-amber-500' : ''}`} />
+              <Pin className={`w-3.5 h-3.5 ${note.isPinned ? 'text-[var(--accent-gold)] fill-[var(--accent-gold)]' : ''}`} />
             </button>
 
             {/* 2. COPY */}
@@ -197,7 +197,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               type="button"
               onClick={handleCopy}
               title="Copy note"
-              className="p-1 text-black/30 hover:text-black rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+              className="p-1 text-[var(--text-primary)]/40 hover:text-[var(--text-primary)] rounded-md hover:bg-[var(--border)] transition-colors cursor-pointer"
             >
               {copied ? (
                 <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -211,7 +211,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               type="button"
               onClick={handleEdit}
               title="Edit note"
-              className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1 text-[var(--text-primary)]/40 hover:text-[var(--accent-gold)] rounded-md hover:bg-[var(--border)] transition-colors cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5" />
             </button>
@@ -221,7 +221,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               type="button"
               onClick={handleDelete}
               title="Remove note"
-              className="p-1 text-black/30 hover:text-rose-600 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+              className="p-1 text-[var(--text-primary)]/40 hover:text-rose-500 rounded-md hover:bg-[var(--border)] transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -239,14 +239,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               }
               className={`p-1 rounded-md transition-colors cursor-pointer ${
                 note.isLocked
-                  ? 'text-amber-500 hover:text-amber-600 hover:bg-black/5'
-                  : 'text-black/30 hover:text-amber-500 hover:bg-black/5'
+                  ? 'text-[var(--accent-gold)] hover:text-[var(--accent-gold)]/80 hover:bg-[var(--border)]'
+                  : 'text-[var(--text-primary)]/40 hover:text-[var(--accent-gold)] hover:bg-[var(--border)]'
               }`}
             >
               {note.isLocked && !isLockedActive ? (
                 <Unlock className="w-3.5 h-3.5" />
               ) : (
-                <Lock className={`w-3.5 h-3.5 ${note.isLocked ? 'fill-amber-500/20' : ''}`} />
+                <Lock className={`w-3.5 h-3.5 ${note.isLocked ? 'fill-[var(--accent-gold)]/20' : ''}`} />
               )}
             </button>
           </div>
@@ -261,10 +261,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       onClick={handleCardClick}
       className={`group relative flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
         isLockedActive
-          ? 'border-[#3D352E] bg-[#221E19]'
+          ? 'border-[var(--border)] bg-[var(--bg-card)]'
           : isSelected
-          ? 'border-[#C5A059] bg-[#221E19] ring-1 ring-[#C5A059]'
-          : 'border-[#3D352E] hover:border-[#C5A059] bg-[#221E19]'
+          ? 'border-[var(--accent-gold)] bg-[var(--bg-card)] ring-1 ring-[var(--accent-gold)]'
+          : 'border-[var(--border)] hover:border-[var(--accent-gold)] bg-[var(--bg-card)]'
       }`}
     >
       <div>
