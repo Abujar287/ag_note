@@ -213,21 +213,21 @@ export const NoteModal: React.FC<NoteModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#14241D]/80 backdrop-blur-sm animate-in fade-in duration-200 p-0 sm:p-4"
       onClick={handleCloseRequest}
     >
       <div
-        className="w-full h-full sm:h-auto sm:max-h-[95vh] sm:max-w-3xl bg-white sm:rounded-2xl shadow-2xl border-black/10 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+        className="w-full h-full sm:h-auto sm:max-h-[95vh] sm:max-w-3xl bg-[#162920] sm:rounded-2xl shadow-2xl border-[#244234] overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header: Title on left, Save/Close on right */}
-        <div className="px-5 py-3.5 border-b border-black/10 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div className="px-5 py-3.5 border-b border-[#244234] flex items-center justify-between bg-[#162920] sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-black text-base">
+            <h3 className="font-bold text-[#F0F7F4] text-base">
               {initialNote ? 'Edit Note' : 'Create New Note'}
             </h3>
             {isLocked && (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
+              <span className="flex items-center gap-1 text-[10px] font-bold text-[#F0F7F4] bg-[#244234] px-2 py-0.5 rounded-md">
                 <Lock className="w-3 h-3" /> Locked
               </span>
             )}
@@ -237,7 +237,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
             <button
               type="button"
               onClick={handleSaveAndClose}
-              className="px-6 py-2 text-xs font-black uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-lg shadow-blue-500/25 transition-all cursor-pointer flex items-center gap-2"
+              className="px-6 py-2 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[#10B981] hover:bg-[#10B981]/90 active:scale-95 rounded-xl shadow-lg shadow-[#10B981]/25 transition-all cursor-pointer flex items-center gap-2"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>{initialNote ? 'Update' : 'Save'}</span>
@@ -246,7 +246,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
               type="button"
               onClick={handleCloseRequest}
               title={initialNote ? "Discard changes" : "Close"}
-              className="text-slate-400 hover:text-rose-500 p-2 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all cursor-pointer"
+              className="text-[#8DA89B] hover:text-[#F0F7F4] p-2 rounded-full hover:bg-[#244234] transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -254,12 +254,12 @@ export const NoteModal: React.FC<NoteModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <div className="flex-1 overflow-y-auto flex flex-col bg-white">
+        <div className="flex-1 overflow-y-auto flex flex-col bg-[#162920]">
           <div className="p-5 sm:p-6 space-y-5 flex-1 flex flex-col">
             {/* Top Row: Name and Category */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-black text-black/50 uppercase tracking-[0.2em] mb-1.5">
+                <label className="block text-[10px] font-black text-[#8DA89B] uppercase tracking-[0.2em] mb-1.5">
                   Name / Title
                 </label>
                 <input
@@ -268,19 +268,19 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Note name (optional)..."
-                  className="w-full px-4 py-2 bg-white border border-black/20 rounded-xl text-sm font-bold focus:outline-none focus:border-black text-black placeholder:text-black/30 transition-all"
+                  className="w-full px-4 py-2 bg-[#12211A] border border-[#244234] rounded-xl text-sm font-bold focus:outline-none focus:border-[#10B981] text-[#F0F7F4] placeholder-[#8DA89B] transition-all"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[10px] font-black text-black/50 uppercase tracking-[0.2em]">
+                  <label className="text-[10px] font-black text-[#8DA89B] uppercase tracking-[0.2em]">
                     Category
                   </label>
                   <button
                     type="button"
                     onClick={onOpenCategoryModal}
-                    className="text-[10px] text-black hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
+                    className="text-[10px] text-[#F0F7F4] hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
                   >
                     <Plus className="w-3 h-3" /> Manage
                   </button>
@@ -288,7 +288,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-black/20 rounded-xl text-sm font-bold focus:outline-none focus:border-black text-black cursor-pointer transition-all"
+                  className="w-full px-4 py-2 bg-[#12211A] border border-[#244234] rounded-xl text-sm font-bold focus:outline-none focus:border-[#10B981] text-[#F0F7F4] cursor-pointer transition-all"
                 >
                   <option value="Uncategorized">Uncategorized</option>
                   {categories.map((cat) => (
@@ -303,7 +303,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
             {/* Content Area - Full Width/Flex Grow */}
             <div className="flex-1 flex flex-col min-h-[300px]">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[10px] font-black text-black/50 uppercase tracking-[0.2em]">
+                <label className="text-[10px] font-black text-[#8DA89B] uppercase tracking-[0.2em]">
                   Text Content
                 </label>
 
@@ -312,14 +312,14 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                   <button
                     type="button"
                     onClick={() => insertFormatting('**', '**')}
-                    className="p-1.5 text-black/40 hover:text-black rounded-md transition-colors cursor-pointer"
+                    className="p-1.5 text-[#8DA89B] hover:text-[#F0F7F4] rounded-md transition-colors cursor-pointer"
                   >
                     <Bold className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => insertFormatting('*', '*')}
-                    className="p-1.5 text-black/40 hover:text-black rounded-md transition-colors cursor-pointer"
+                    className="p-1.5 text-[#8DA89B] hover:text-[#F0F7F4] rounded-md transition-colors cursor-pointer"
                   >
                     <Italic className="w-4 h-4" />
                   </button>
@@ -329,7 +329,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                     className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
                       isListening
                         ? 'bg-rose-600 text-white animate-pulse'
-                        : 'bg-black/5 text-black hover:bg-black/10'
+                        : 'bg-[#244234] text-[#F0F7F4] hover:bg-[#29473B]'
                     }`}
                   >
                     {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
@@ -343,10 +343,10 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Write your note here..."
-                className="flex-1 w-full p-4 bg-white border border-black/10 rounded-2xl text-sm sm:text-base leading-relaxed focus:outline-none focus:border-black/30 text-black placeholder:text-black/30 resize-none transition-all font-sans"
+                className="flex-1 w-full p-4 bg-[#12211A] border border-[#244234] rounded-2xl text-sm sm:text-base leading-relaxed focus:outline-none focus:border-[#10B981] text-[#F0F7F4] placeholder-[#8DA89B] resize-none transition-all font-sans"
               />
 
-              <div className="flex justify-between items-center text-[10px] font-black text-black/40 uppercase tracking-widest mt-2 px-1">
+              <div className="flex justify-between items-center text-[10px] font-black text-[#8DA89B] uppercase tracking-widest mt-2 px-1">
                 <div className="flex items-center gap-3">
                   <span>{words} words</span>
                   <span>{chars} chars</span>
@@ -355,7 +355,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                   <button 
                     type="button"
                     onClick={() => setIsLocked(!isLocked)}
-                    className={`flex items-center gap-1.5 transition-colors cursor-pointer ${isLocked ? 'text-amber-500' : 'hover:text-black'}`}
+                    className={`flex items-center gap-1.5 transition-colors cursor-pointer ${isLocked ? 'text-[#10B981]' : 'hover:text-[#F0F7F4]'}`}
                   >
                     <Lock className="w-3 h-3" />
                     <span>{isLocked ? 'Locked' : 'Lock Note'}</span>
@@ -376,10 +376,10 @@ export const NoteModal: React.FC<NoteModalProps> = ({
             </div>
             
             {isLocked && (
-              <div className="animate-in slide-in-from-top-2 duration-200 p-4 rounded-2xl bg-black/5 border border-black/10">
+              <div className="animate-in slide-in-from-top-2 duration-200 p-4 rounded-2xl bg-[#12211A] border border-[#244234]">
                 <div className="flex items-center gap-2 mb-3">
-                  <Lock className="w-4 h-4 text-black" />
-                  <span className="text-xs font-black text-black uppercase tracking-wider">Password Protection</span>
+                  <Lock className="w-4 h-4 text-[#F0F7F4]" />
+                  <span className="text-xs font-black text-[#F0F7F4] uppercase tracking-wider">Password Protection</span>
                 </div>
                 <div className="relative max-w-sm">
                   <input
@@ -387,17 +387,17 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                     value={customPassword}
                     onChange={(e) => setCustomPassword(e.target.value)}
                     placeholder="Custom password (optional)"
-                    className="w-full pl-3 pr-10 py-2 bg-white border border-black/20 rounded-xl text-xs font-mono text-black focus:outline-none focus:border-black/30"
+                    className="w-full pl-3 pr-10 py-2 bg-[#14241D] border border-[#244234] rounded-xl text-xs font-mono text-[#F0F7F4] focus:outline-none focus:border-[#10B981]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black p-0.5"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8DA89B] hover:text-[#F0F7F4] p-0.5"
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
-                <p className="text-[10px] text-black/50 mt-2 font-bold uppercase tracking-wider">
+                <p className="text-[10px] text-[#8DA89B] mt-2 font-bold uppercase tracking-wider">
                   Master password can always unlock this note.
                 </p>
               </div>

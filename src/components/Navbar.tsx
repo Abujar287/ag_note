@@ -57,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 w-full bg-[#1a2e24]/90 backdrop-blur-md border-b border-[#2d4a3b]">
+      <header className="fixed top-0 left-0 right-0 z-30 w-full bg-[#221E19]/90 backdrop-blur-md border-b border-[#3D352E]">
       {/* PWA Mobile App Install Top Banner */}
       <PWAInstallBanner />
 
@@ -67,31 +67,31 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onToggleMobileMenu}
-            className="p-1.5 md:hidden text-black hover:bg-black/5 rounded-lg transition-colors cursor-pointer shrink-0"
+            className="p-1.5 md:hidden text-[#E0D6C5] hover:bg-[#3D352E] rounded-lg transition-colors cursor-pointer shrink-0"
             aria-label="Menu"
           >
             <Menu className="w-5 h-5" />
           </button>
 
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            {/* The Logo: Circular badge with text "AG Note" inside as explicitly requested */}
+            {/* The Logo: Circular badge */}
             <div
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex flex-col items-center justify-center shrink-0 select-none cursor-default shadow-md"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-[#C5A059] to-[#8a6d3b] text-[#14110E] flex flex-col items-center justify-center shrink-0 select-none cursor-default shadow-md"
               title="AG Note"
             >
-              <span className="text-[11px] font-black tracking-tight leading-none text-white font-sans">
+              <span className="text-[11px] font-black tracking-tight leading-none font-sans">
                 AG
               </span>
-              <span className="text-[8px] font-bold tracking-wider leading-none text-blue-200 uppercase mt-0.5">
+              <span className="text-[8px] font-bold tracking-wider leading-none uppercase mt-0.5">
                 Note
               </span>
             </div>
 
             <div className="leading-tight min-w-0">
-              <h1 className="text-sm sm:text-base font-black tracking-tight text-black truncate uppercase">
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-[#E0D6C5] truncate uppercase">
                 AG Note
               </h1>
-              <p className="text-[9px] sm:text-[10px] font-bold text-black/40 hidden sm:block truncate uppercase tracking-wider">
+              <p className="text-[9px] sm:text-[10px] font-bold text-[#8DA89B] hidden sm:block truncate uppercase tracking-wider">
                 Smart & Secure Notepad
               </p>
             </div>
@@ -101,19 +101,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Zone 2: Desktop Search Bar with Color Filter */}
         <div className="flex-1 max-w-sm hidden sm:flex items-center gap-2 mx-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8DA89B]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search notes..."
-              className="w-full pl-9 pr-7 py-2 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-sm focus:outline-none text-slate-900 placeholder:text-slate-400 transition-all"
+              className="w-full pl-9 pr-7 py-2 bg-[#12100d] border border-[#3D352E] focus:border-[#C5A059] rounded-xl text-sm focus:outline-none text-[#E0D6C5] placeholder-[#8DA89B] transition-all"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8DA89B] hover:text-[#E0D6C5] cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -123,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <select
             value={activeColorFilter || ''}
             onChange={(e) => onColorFilterChange(e.target.value as any || null)}
-            className="p-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer"
+            className="p-2 bg-[#12100d] border border-[#3D352E] rounded-xl text-sm text-[#E0D6C5] focus:outline-none focus:border-[#C5A059] cursor-pointer"
             title="Filter by color"
           >
             <option value="">All</option>

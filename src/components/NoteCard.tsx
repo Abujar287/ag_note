@@ -259,12 +259,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group relative flex flex-col justify-between p-3.5 rounded-xl border bg-white transition-all cursor-pointer hover:shadow-md ${
+      className={`group relative flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
         isLockedActive
-          ? 'border-amber-400 bg-amber-50/15'
+          ? 'border-[#3D352E] bg-[#221E19]'
           : isSelected
-          ? 'border-black bg-black/5 ring-1 ring-black'
-          : 'border-black/10 hover:border-black/30'
+          ? 'border-[#C5A059] bg-[#221E19] ring-1 ring-[#C5A059]'
+          : 'border-[#3D352E] hover:border-[#C5A059] bg-[#221E19]'
       }`}
     >
       <div>
@@ -280,27 +280,27 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   onSelect(note.id);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                className="w-3.5 h-3.5 rounded text-[#C5A059] focus:ring-[#C5A059]/20 cursor-pointer"
               />
             )}
             <div
               className={`w-2 h-2 rounded-full shrink-0 ${
-                isLockedActive ? 'bg-amber-500' : colorConfig.dotClass
+                isLockedActive ? 'bg-[#C5A059]' : colorConfig.dotClass
               }`}
             />
-            <span className="text-[10px] font-black text-black/60 uppercase tracking-widest truncate">
+            <span className="text-[10px] font-black text-[#8DA89B] uppercase tracking-widest truncate">
               {note.category || 'Uncategorized'}
             </span>
           </div>
 
           <div className="flex items-center gap-1">
             {note.isPinned && (
-              <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <Pin className="w-3.5 h-3.5 text-[#C5A059] fill-[#C5A059]" />
             )}
             {note.isLocked && (
               <Lock
                 className={`w-3.5 h-3.5 ${
-                  isLockedActive ? 'text-amber-500' : 'text-black/30'
+                  isLockedActive ? 'text-[#C5A059]' : 'text-[#8DA89B]'
                 }`}
               />
             )}
@@ -310,24 +310,24 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         {/* Title & 1st Line content */}
         {isLockedActive ? (
           <div className="py-2.5 flex flex-col items-center justify-center text-center">
-            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1.5 shadow-2xs">
+            <div className="w-8 h-8 rounded-full bg-[#221E19] text-[#C5A059] flex items-center justify-center mb-1.5 shadow-2xs">
               <Lock className="w-4 h-4 stroke-[2.2]" />
             </div>
-            <h3 className="font-bold text-amber-700 dark:text-amber-400 text-sm mb-0.5">
+            <h3 className="font-bold text-[#E0D6C5] text-sm mb-0.5">
               Locked
             </h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+            <p className="text-[11px] text-[#8DA89B] font-mono">
               ••••••••••••••••
             </p>
           </div>
         ) : (
           <>
-            <h3 className="font-bold text-black text-sm mb-1 truncate group-hover:text-blue-600 transition-colors">
+            <h3 className="font-bold text-[#E0D6C5] text-sm mb-1 truncate group-hover:text-[#C5A059] transition-colors">
               {note.title}
             </h3>
 
             {/* Content: ONLY 1st line of the note */}
-            <p className="text-xs text-black/60 truncate leading-snug mb-2 font-normal">
+            <p className="text-xs text-[#8DA89B] truncate leading-snug mb-2 font-normal">
               {firstLine || 'No content'}
             </p>
           </>
@@ -335,7 +335,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       </div>
 
       {/* Footer: datetime, pin, copy, edit, remove, lock */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400">
+      <div className="flex items-center justify-between pt-2 border-t border-[#3D352E] text-[11px] text-[#8DA89B]">
         <span className="font-mono tabular-nums">{formatDate(note.createdAt)}</span>
 
         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
@@ -344,9 +344,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             type="button"
             onClick={handlePin}
             title={note.isPinned ? 'Unpin note' : 'Pin note'}
-            className="p-1 text-slate-400 hover:text-amber-500 rounded transition-colors cursor-pointer"
+            className="p-1 text-[#8DA89B] hover:text-[#C5A059] rounded transition-colors cursor-pointer"
           >
-            <Pin className={`w-3.5 h-3.5 ${note.isPinned ? 'text-amber-500 fill-amber-500' : ''}`} />
+            <Pin className={`w-3.5 h-3.5 ${note.isPinned ? 'text-[#C5A059] fill-[#C5A059]' : ''}`} />
           </button>
 
           {/* 2. COPY */}
@@ -354,10 +354,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             type="button"
             onClick={handleCopy}
             title="Copy note"
-            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded transition-colors cursor-pointer"
+            className="p-1 text-[#8DA89B] hover:text-[#E0D6C5] rounded transition-colors cursor-pointer"
           >
             {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-500" />
+              <Check className="w-3.5 h-3.5 text-[#C5A059]" />
             ) : (
               <Copy className="w-3.5 h-3.5" />
             )}
@@ -368,7 +368,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             type="button"
             onClick={handleEdit}
             title="Edit note"
-            className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors cursor-pointer"
+            className="p-1 text-[#8DA89B] hover:text-[#C5A059] rounded transition-colors cursor-pointer"
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
@@ -378,7 +378,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             type="button"
             onClick={handleDelete}
             title="Remove note"
-            className="p-1 text-black/30 hover:text-rose-600 rounded transition-colors cursor-pointer"
+            className="p-1 text-[#8DA89B] hover:text-rose-600 rounded transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -396,14 +396,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             }
             className={`p-1 rounded transition-colors cursor-pointer ${
               note.isLocked
-                ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40'
-                : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'text-[#C5A059] hover:text-[#C5A059]/80 hover:bg-[#3D352E]'
+                : 'text-[#8DA89B] hover:text-[#C5A059] hover:bg-[#3D352E]'
             }`}
           >
             {note.isLocked && !isLockedActive ? (
               <Unlock className="w-3.5 h-3.5" />
             ) : (
-              <Lock className={`w-3.5 h-3.5 ${note.isLocked ? 'fill-amber-500/20' : ''}`} />
+              <Lock className={`w-3.5 h-3.5 ${note.isLocked ? 'fill-[#C5A059]/20' : ''}`} />
             )}
           </button>
         </div>

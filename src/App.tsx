@@ -831,7 +831,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-slate-50 text-slate-900 flex flex-col relative">
+    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-[#14110E] text-[#E0D6C5] flex flex-col relative">
       {/* Top Navbar with AG Note Circular Text Logo (No + button in header) */}
       <Navbar
         searchQuery={searchQuery}
