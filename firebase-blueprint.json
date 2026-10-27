@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Note": {
+      "title": "Note",
+      "description": "A personal note created by the user.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the note." },
+        "content": { "type": "string", "description": "Text content of the note." },
+        "category": { "type": "string", "description": "Category name." },
+        "color": { "type": "string", "enum": ["blue", "emerald", "amber", "rose", "purple", "cyan", "slate"] },
+        "isPinned": { "type": "boolean" },
+        "isLocked": { "type": "boolean" },
+        "password": { "type": "string", "description": "Optional password for the note." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "deletedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string", "description": "Owner UID." }
+      },
+      "required": ["title", "content", "category", "color", "isPinned", "createdAt", "updatedAt", "userId"]
+    },
+    "UserPreferences": {
+      "title": "User Preferences",
+      "description": "Settings and preferences for the user.",
+      "type": "object",
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "theme": { "type": "string", "enum": ["light", "dark"] },
+        "sortMode": { "type": "string" },
+        "viewMode": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Collection of notes for a specific user."
+    },
+    "users/{userId}/settings/preferences": {
+      "schema": "UserPreferences",
+      "description": "User specific preferences and settings."
+    }
+  }
+}
