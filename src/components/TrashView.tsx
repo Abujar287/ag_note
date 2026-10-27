@@ -88,17 +88,17 @@ export const TrashView: React.FC<TrashViewProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
           {trashNotes.map((note) => {
             const firstLine = getFirstLine(note.content);
             return (
               <div
                 key={note.id}
-                className="flex flex-col justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
+                className="flex flex-col justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-1 text-[11px] text-slate-400">
-                    <span className="font-semibold text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 text-[9px] text-slate-400">
+                    <span className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tighter truncate max-w-[60px]">
                       {note.category}
                     </span>
                     <span className="font-mono tabular-nums">
@@ -106,11 +106,11 @@ export const TrashView: React.FC<TrashViewProps> = ({
                     </span>
                   </div>
 
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm mb-1 truncate">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xs mb-0.5 truncate">
                     {note.title}
                   </h3>
 
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate leading-snug mb-3">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate leading-tight mb-2">
                     {firstLine || 'No content'}
                   </p>
                 </div>
@@ -119,19 +119,19 @@ export const TrashView: React.FC<TrashViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onRestoreNote(note.id)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-900/50 transition-colors cursor-pointer"
+                    className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <RotateCcw className="w-3 h-3" />
                     <span>Restore</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => onRequestPermanentDelete(note)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
+                    className="flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
                   >
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    <span>Delete Forever</span>
+                    <Trash2 className="w-3 h-3" />
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>

@@ -161,7 +161,7 @@ export default function App() {
   const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(() => localStorage.getItem('smart_notepad_sheet_url') || '');
+  const [googleSheetId] = useState<string>('11h5YrEcSOx7y6_AEFf3phJIoirkgpFtfAsOxpL8T5rk');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => localStorage.getItem('smart_notepad_last_sync'));
 
   // Password Unlock Modal state
@@ -591,6 +591,10 @@ export default function App() {
   // ==================== DELETE IMPLEMENTATION ====================
 
   const requestDeleteNote = (note: Note) => {
+    if (note.isLocked) {
+      showToast('Locked notes cannot be deleted. Unlock first.', 'error');
+      return;
+    }
     setDeleteModal({
       isOpen: true,
       noteTitle: note.isLocked && !unlockedNoteIds.has(note.id) ? 'Locked Note' : note.title,
@@ -625,8 +629,20 @@ export default function App() {
   // Batch delete selected active notes
   const requestBatchDelete = () => {
     if (selectedNoteIds.length === 0) return;
-    const selectedCount = selectedNoteIds.length;
-    const currentSelectedIds = [...selectedNoteIds];
+    
+    const selectedNotes = notes.filter(n => selectedNoteIds.includes(n.id));
+    const lockedSelectedCount = selectedNotes.filter(n => n.isLocked).length;
+    
+    if (lockedSelectedCount > 0) {
+      showToast(`${lockedSelectedCount} locked notes skipped. Unlock them to delete.`, 'info');
+    }
+    
+    const deletableIds = selectedNotes.filter(n => !n.isLocked).map(n => n.id);
+    
+    if (deletableIds.length === 0) return;
+    
+    const selectedCount = deletableIds.length;
+    const currentSelectedIds = [...deletableIds];
 
     setDeleteModal({
       isOpen: true,
@@ -647,7 +663,7 @@ export default function App() {
         addDeletedNoteIds(currentSelectedIds);
         setNotes(remaining);
         setTrashNotes((prev) => [...toTrash, ...prev]);
-        setSelectedNoteIds([]);
+        setSelectedNoteIds((prev) => prev.filter(id => !currentSelectedIds.includes(id)));
 
         showToast(`${selectedCount} notes moved to Trash`, 'success', () => {
           removeDeletedNoteIds(currentSelectedIds);
@@ -683,6 +699,10 @@ export default function App() {
 
   // Permanently delete single note from trash
   const requestPermanentDelete = (note: Note) => {
+    if (note.isLocked) {
+      showToast('Locked notes cannot be deleted. Unlock first.', 'error');
+      return;
+    }
     setDeleteModal({
       isOpen: true,
       noteTitle: note.title,
@@ -692,6 +712,8 @@ export default function App() {
         addDeletedNoteIds([note.id]);
         setTrashNotes((prev) => prev.filter((n) => n.id !== note.id));
         showToast('Note permanently deleted');
+        // Auto-sync after permanent deletion
+        setTimeout(() => handleSync(), 500);
       },
     });
   };
@@ -699,14 +721,25 @@ export default function App() {
   // Empty entire trash
   const requestEmptyTrash = () => {
     if (trashNotes.length === 0) return;
+    
+    const lockedCount = trashNotes.filter(n => n.isLocked).length;
+    if (lockedCount > 0) {
+      showToast(`${lockedCount} locked notes in trash skipped. Unlock them to delete permanently.`, 'info');
+    }
+    
+    const deletableNotes = trashNotes.filter(n => !n.isLocked);
+    if (deletableNotes.length === 0) return;
+
     setDeleteModal({
       isOpen: true,
       isPermanent: true,
-      count: trashNotes.length,
+      count: deletableNotes.length,
       onConfirm: () => {
-        addDeletedNoteIds(trashNotes.map((n) => n.id));
-        setTrashNotes([]);
-        showToast('Trash emptied');
+        addDeletedNoteIds(deletableNotes.map((n) => n.id));
+        setTrashNotes((prev) => prev.filter(n => n.isLocked));
+        showToast('Trash emptied (deletable notes)');
+        // Auto-sync after emptying trash
+        setTimeout(() => handleSync(), 500);
       },
     });
   };
@@ -756,16 +789,13 @@ export default function App() {
     }
   };
 
-  const handleSaveSettings = (sheetUrl: string) => {
-    localStorage.setItem('smart_notepad_sheet_url', sheetUrl);
-    setGoogleSheetUrl(sheetUrl);
+  const handleSaveSettings = () => {
     showToast('Settings saved successfully');
   };
 
   const handleSync = async () => {
-    if (!googleSheetUrl) {
-      showToast('Please set Google Sheet URL in Settings first', 'error');
-      setIsSettingsModalOpen(true);
+    if (!googleSheetId) {
+      showToast('Sync target not configured', 'error');
       return;
     }
     
@@ -789,18 +819,13 @@ export default function App() {
       return;
     }
 
-    const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    if (!match) {
-      showToast('Invalid Google Sheet URL', 'error');
-      return;
-    }
-    const spreadsheetId = match[1];
+    const spreadsheetId = googleSheetId;
 
     try {
       // Prepare data
       const values = notes.map(n => {
         const d = new Date(n.updatedAt);
-        const formattedDate = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+        const formattedDate = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
         return [
           formattedDate,
           n.title,
@@ -1246,7 +1271,7 @@ export default function App() {
       {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
-        initialUrl={googleSheetUrl}
+        initialUrl={googleSheetId}
         onSave={handleSaveSettings}
         onClose={() => setIsSettingsModalOpen(false)}
       />

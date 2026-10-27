@@ -9,12 +9,6 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, initialUrl }) => {
-  const [sheetUrl, setSheetUrl] = useState(initialUrl);
-
-  useEffect(() => {
-    setSheetUrl(initialUrl);
-  }, [initialUrl, isOpen]);
-
   if (!isOpen) return null;
 
   return (
@@ -30,38 +24,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#8DA89B] uppercase tracking-wider mb-2">
-              Google Sheet URL for Sync
-            </label>
-            <div className="relative">
-              <LinkIcon className="w-4 h-4 absolute left-3 top-3 text-[#8DA89B]" />
-              <input
-                type="url"
-                value={sheetUrl}
-                onChange={(e) => setSheetUrl(e.target.value)}
-                placeholder="https://docs.google.com/spreadsheets/..."
-                className="w-full pl-10 pr-4 py-2.5 bg-[#12211A] border border-[#244234] rounded-xl text-sm text-[#F0F7F4] focus:outline-none focus:border-[#D4AF37]"
-              />
+          <div className="p-4 bg-[#12211A] border border-[#244234] rounded-xl">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-full bg-[#D4AF37]/10 flex items-center justify-center">
+                <LinkIcon className="w-4 h-4 text-[#D4AF37]" />
+              </div>
+              <label className="text-xs font-bold text-[#8DA89B] uppercase tracking-wider">
+                Target Google Sheet
+              </label>
             </div>
-            <p className="text-[10px] text-[#8DA89B] mt-2 italic">
-              All notes will be synced to this sheet automatically.
+            <div className="font-mono text-xs text-[#F0F7F4] break-all bg-[#0d1a14] p-2 rounded-lg border border-[#244234]/50">
+              {initialUrl}
+            </div>
+            <p className="text-[10px] text-[#8DA89B] mt-3 italic leading-relaxed">
+              Google Sheet link is now fixed for automatic sync. Manual input is no longer required.
             </p>
           </div>
         </div>
 
         <div className="mt-8 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-[#8DA89B] hover:text-[#F0F7F4] rounded-xl">
-            Cancel
-          </button>
           <button
-            onClick={() => {
-              onSave(sheetUrl);
-              onClose();
-            }}
-            className="px-6 py-2 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[#D4AF37] hover:bg-[#D4AF37]/90 rounded-xl shadow-lg flex items-center gap-2"
+            onClick={onClose}
+            className="px-8 py-2.5 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[#D4AF37] hover:bg-[#D4AF37]/90 rounded-xl shadow-lg transition-transform active:scale-95"
           >
-            <Save className="w-3.5 h-3.5" /> Save
+            Done
           </button>
         </div>
       </div>
