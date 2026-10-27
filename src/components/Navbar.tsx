@@ -30,6 +30,7 @@ interface NavbarProps {
   onColorFilterChange: (color: string | null) => void;
   onSync: () => void;
   lastSyncTime: string | null;
+  isSyncing: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -48,6 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onColorFilterChange,
   onSync,
   lastSyncTime,
+  isSyncing,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,9 +103,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                   <button 
                     onClick={onSync}
-                    className="text-[9px] text-[var(--accent-gold)] font-bold hover:underline cursor-pointer"
+                    disabled={isSyncing}
+                    className={`text-[9px] font-bold hover:underline cursor-pointer ${isSyncing ? 'text-[var(--text-primary)]/30 animate-pulse' : 'text-[var(--accent-gold)]'}`}
                   >
-                    Sync
+                    {isSyncing ? 'Syncing...' : 'Sync'}
                   </button>
                 </div>
               </div>

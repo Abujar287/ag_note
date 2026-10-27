@@ -15,14 +15,13 @@ let cachedAccessToken: string | null = localStorage.getItem('google_sheets_acces
 
 // Initialize auth state listener. Call this on app load.
 export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthSuccess?: (user: User, token: string | null) => void,
   onUserSignedOut?: () => void
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      }
+      // Return user even if token is null, handleSync will request it if needed
+      if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
     } else {
       cachedAccessToken = null;
       localStorage.removeItem('google_sheets_access_token');

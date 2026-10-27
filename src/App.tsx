@@ -76,44 +76,64 @@ const removeDeletedNoteIds = (ids: string[]) => {
 
 export default function App() {
   // Primary States: Initializing with persistent storage and deleted IDs filtering
+  // Helper to deduplicate notes by ID
+  const deduplicateNotes = (noteList: Note[]): Note[] => {
+    const map = new Map<string, Note>();
+    noteList.forEach(n => {
+      if (n && n.id) {
+        // If duplicate ID, keep the one with newer updatedAt
+        const existing = map.get(n.id);
+        if (!existing || new Date(n.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
+          map.set(n.id, n);
+        }
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  // Primary States: Initializing with persistent storage and deleted IDs filtering
   const [notes, setNotes] = useState<Note[]>(() => {
     try {
       const deletedIds = getDeletedNoteIds();
       const isInitialized = localStorage.getItem('smart_notepad_initialized_v4');
       const savedV4 = localStorage.getItem('smart_notepad_notes_v4');
 
+      let initialList: Note[] = [];
+
       if (isInitialized && savedV4 !== null) {
         const parsed = JSON.parse(savedV4);
         if (Array.isArray(parsed)) {
-          return parsed.filter((n: Note) => !deletedIds.has(n.id));
+          initialList = parsed;
         }
-      }
-
-      // Migration / Initial import
-      let initialList: Note[] = [];
-      const savedV3 = localStorage.getItem('smart_notepad_notes_v3');
-      if (savedV3) {
-        try {
-          const parsedV3 = JSON.parse(savedV3);
-          if (Array.isArray(parsedV3)) {
-            initialList = parsedV3;
+      } else {
+        // Migration / Initial import
+        const savedV3 = localStorage.getItem('smart_notepad_notes_v3');
+        if (savedV3) {
+          try {
+            const parsedV3 = JSON.parse(savedV3);
+            if (Array.isArray(parsedV3)) {
+              initialList = parsedV3;
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
+        }
+
+        if (initialList.length === 0 && !isInitialized) {
+          initialList = (importedNotesRaw as Note[]).map((n) => ({
+            ...n,
+            category: n.category || 'Uncategorized',
+          }));
         }
       }
 
-      if (initialList.length === 0 && !isInitialized) {
-        initialList = (importedNotesRaw as Note[]).map((n) => ({
-          ...n,
-          category: 'Uncategorized',
-        }));
-      }
-
+      // Filter out deleted notes and deduplicate
       const filtered = initialList.filter((n: Note) => !deletedIds.has(n.id));
-      localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(filtered));
+      const deduped = deduplicateNotes(filtered);
+      
+      localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(deduped));
       localStorage.setItem('smart_notepad_initialized_v4', 'true');
-      return filtered;
+      return deduped;
     } catch {
       return [];
     }
@@ -124,7 +144,7 @@ export default function App() {
       const saved = localStorage.getItem('smart_notepad_trash');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) return deduplicateNotes(parsed);
       }
     } catch {
       // fallback
@@ -473,9 +493,8 @@ export default function App() {
 
   // Toggle Pin
   const handleTogglePin = (id: string) => {
-    let updatedNotes: Note[] = [];
     setNotes((prev) => {
-      updatedNotes = prev.map((n) => {
+      const updatedNotes = prev.map((n) => {
         if (n.id === id) {
           const nextState = !n.isPinned;
           showToast(nextState ? 'Note pinned' : 'Note unpinned');
@@ -483,13 +502,13 @@ export default function App() {
         }
         return n;
       });
+      handleSync(true, updatedNotes);
       return updatedNotes;
     });
 
     if (viewingNote?.id === id) {
       setViewingNote((prev) => (prev ? { ...prev, isPinned: !prev.isPinned } : null));
     }
-    setTimeout(() => handleSync(true, updatedNotes), 100);
   };
 
   // ==================== Password Lock Handlers ====================
@@ -579,8 +598,8 @@ export default function App() {
 
   const handleToggleLockNote = (note: Note) => {
     const nextLocked = !note.isLocked;
-    setNotes((prev) =>
-      prev.map((n) =>
+    setNotes((prev) => {
+      const updatedNotes = prev.map((n) =>
         n.id === note.id
           ? {
               ...n,
@@ -589,8 +608,10 @@ export default function App() {
               updatedAt: new Date().toISOString(),
             }
           : n
-      )
-    );
+      );
+      handleSync(true, updatedNotes);
+      return updatedNotes;
+    });
 
     if (nextLocked) {
       setUnlockedNoteIds((prev) => {
@@ -773,12 +794,13 @@ export default function App() {
   // Re-import all notes from the attached file on demand
   const handleReloadAttachedNotes = () => {
     localStorage.removeItem('smart_notepad_deleted_ids');
-    setNotes(importedNotesRaw as Note[]);
+    const deduped = deduplicateNotes(importedNotesRaw as Note[]);
+    setNotes(deduped);
     setCategories(DEFAULT_CATEGORIES);
     setUnlockedNoteIds(new Set());
     localStorage.setItem('smart_notepad_imported_856', 'true');
-    localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(importedNotesRaw));
-    showToast(`Imported ${importedNotesRaw.length} notes from attached file!`);
+    localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(deduped));
+    showToast(`Imported ${deduped.length} notes from attached file!`);
   };
 
   // Batch Category Assignment
@@ -815,198 +837,272 @@ export default function App() {
     }
   };
 
-  const handleSync = async (silent = false, currentNotes?: Note[]) => {
-    if (isSyncing) return;
-    setIsSyncing(true);
-    
-    let accessToken = await getAccessToken();
-    
-    if (!accessToken) {
-      if (silent) {
-        setIsSyncing(false);
-        return;
-      }
-      try {
-        const result = await googleSignIn();
-        accessToken = result?.accessToken || null;
-      } catch (err) {
-        console.error('Login error during sync:', err);
-        showToast('Authentication failed', 'error');
-        setNeedsAuth(true);
-        setIsSyncing(false);
-        return;
-      }
-    }
+  const [syncInProgress, setSyncInProgress] = useState(false);
+  const syncRequestedRef = React.useRef(false);
 
-    if (!accessToken) {
-      if (!silent) {
-        showToast('Authentication required', 'error');
-        setNeedsAuth(true);
-      }
-      setIsSyncing(false);
+  const handleSync = async (silent = false, currentNotes?: Note[]) => {
+    if (syncInProgress) {
+      syncRequestedRef.current = true;
       return;
     }
+    setSyncInProgress(true);
+    syncRequestedRef.current = false;
 
-    try {
-      const sheetId = FIXED_SHEET_ID;
-      const localNotesToSync = currentNotes || notes;
-
-      // 0. Get the sheet metadata to find the first sheet name
-      const metaResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-
-      if (metaResponse.status === 404) {
-        throw new Error('NOT_FOUND: The spreadsheet ID is invalid or the sheet was deleted.');
-      }
-      if (metaResponse.status === 401) {
-        clearAccessToken();
-        if (!silent) showToast('Session expired, please try again', 'error');
-        setIsSyncing(false);
-        return;
-      }
-      if (!metaResponse.ok) {
-        const errJson = await metaResponse.json().catch(() => ({}));
-        console.error('Sheets API Error Details:', JSON.stringify(errJson));
-        throw new Error(errJson.error?.message || 'Failed to get sheet metadata');
-      }
-
-      const metaData = await metaResponse.json();
-      const firstSheet = metaData.sheets?.[0];
-      const firstSheetName = firstSheet?.properties?.title || 'Sheet1';
-      const firstSheetId = firstSheet?.properties?.sheetId || 0;
-
-      // 1. Fetch current data from the sheet (Source of Truth for content)
-      const fetchRange = `'${firstSheetName}'!A:E`;
-      const getResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fetchRange)}`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-
-      if (!getResponse.ok) {
-        throw new Error('Failed to fetch sheet values');
-      }
-
-      const getData = await getResponse.json();
-      const deletedIds = getDeletedNoteIds();
-      const rowsToDelete: number[] = [];
-      const sheetRows = getData.values || [];
-
-      // 2. Identify rows to delete and local notes that are new
-      // Skip header, process rows
-      sheetRows.slice(1).forEach((row: any[], index: number) => {
-        const title = row[1] || '';
-        const noteText = row[3] || '';
-        const rowIndex = index + 1; // 1-based index in sheet
-
-        const compositeKey = `del_${title}_${noteText.substring(0, 50)}`;
-        
-        if (deletedIds.has(compositeKey)) {
-          rowsToDelete.push(rowIndex);
+    const performSync = async (notesToSync: Note[]) => {
+      let accessToken = await getAccessToken();
+      
+      if (!accessToken && !silent) {
+        try {
+          const result = await googleSignIn();
+          accessToken = result?.accessToken || null;
+        } catch (err) {
+          console.error('Login error during sync:', err);
+          showToast('Authentication failed', 'error');
+          setNeedsAuth(true);
+          return false;
         }
-      });
+      }
 
-      // Identify local notes that are NOT in the sheet (New Additions)
-      const newLocalNotes = localNotesToSync.filter(n => {
-        if (deletedIds.has(n.id)) return false;
-        // Check if already in sheet by title and content
-        const exists = sheetRows.some((row: any[], idx: number) => idx > 0 && row[1] === n.title && row[3] === n.content);
-        return !exists;
-      });
+      if (!accessToken) {
+        if (!silent) {
+          showToast('Authentication required', 'error');
+          setNeedsAuth(true);
+        }
+        return false;
+      }
 
-      // 3. Execute Deletions (Batch Update)
-      if (rowsToDelete.length > 0) {
-        const sortedIndices = [...rowsToDelete].sort((a, b) => b - a);
-        const requests = sortedIndices.map(idx => ({
-          deleteDimension: {
-            range: {
-              sheetId: firstSheetId,
-              dimension: 'ROWS',
-              startIndex: idx,
-              endIndex: idx + 1
+      const sheetFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+        const headers = {
+          ...options.headers,
+          'Authorization': `Bearer ${accessToken}`,
+        };
+        let response = await fetch(url, { ...options, headers });
+        
+        if (response.status === 401) {
+          clearAccessToken();
+          try {
+            const result = await googleSignIn();
+            accessToken = result?.accessToken || null;
+            if (accessToken) {
+              const retryHeaders = {
+                ...options.headers,
+                'Authorization': `Bearer ${accessToken}`,
+              };
+              response = await fetch(url, { ...options, headers: retryHeaders });
+            }
+          } catch (e) {
+            console.error('Retry auth failed', e);
+          }
+        }
+        return response;
+      };
+
+      try {
+        const sheetId = FIXED_SHEET_ID;
+
+        // 0. Get the sheet metadata
+        const metaResponse = await sheetFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`);
+
+        if (metaResponse.status === 404) {
+          throw new Error('Spreadsheet not found. Check if the ID is correct.');
+        }
+        if (!metaResponse.ok) {
+          const errJson = await metaResponse.json().catch(() => ({}));
+          throw new Error(errJson.error?.message || 'Failed to connect to Google Sheets');
+        }
+
+        const metaData = await metaResponse.json();
+        const firstSheet = metaData.sheets?.[0];
+        const firstSheetName = firstSheet?.properties?.title || 'Sheet1';
+        const firstSheetId = firstSheet?.properties?.sheetId || 0;
+
+        // 1. Fetch current data from the sheet
+        const fetchRange = `'${firstSheetName}'!A:E`;
+        const getResponse = await sheetFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fetchRange)}`);
+
+        if (!getResponse.ok) throw new Error('Failed to fetch sheet data');
+
+        const getData = await getResponse.json();
+        const sheetRows = getData.values || [];
+        const deletedIds = getDeletedNoteIds();
+
+        const appendsToExecute: any[][] = [];
+        const updatesToExecute: { range: string, values: any[][] }[] = [];
+        const deletesToExecute: number[] = [];
+
+        // If sheet is completely empty, add header
+        if (sheetRows.length === 0) {
+          appendsToExecute.push(['Date', 'Title', 'Category', 'Content', 'ID']);
+        }
+
+        // 2. Identify Changes
+        const matchedSheetRowIndices = new Set<number>();
+        const localNoteIdsInSheet = new Set<string>();
+
+        sheetRows.forEach((row: any[], index: number) => {
+          if (index === 0) return; // Skip header
+          const sheetNoteId = (row[4] || '').toString().trim();
+          const title = (row[1] || '').toString().trim();
+          const content = (row[3] || '').toString().trim();
+          const category = (row[2] || 'Uncategorized').toString().trim();
+          
+          const compositeKey = `del_${title}_${content.substring(0, 50)}`;
+
+          // Find matching local note
+          const localNote = notesToSync.find(n => 
+            (sheetNoteId && n.id === sheetNoteId) || 
+            (!sheetNoteId && n.title.trim() === title && n.content.trim() === content)
+          );
+
+          if (localNote) {
+            matchedSheetRowIndices.add(index);
+            localNoteIdsInSheet.add(localNote.id);
+            // Check if sheet needs an update
+            const localD = new Date(localNote.updatedAt || localNote.createdAt);
+            const formattedDate = `${(localD.getMonth() + 1).toString().padStart(2, '0')}/${localD.getDate().toString().padStart(2, '0')}/${localD.getFullYear()} ${localD.getHours()}:${localD.getMinutes().toString().padStart(2, '0')}:${localD.getSeconds().toString().padStart(2, '0')}`;
+            
+            const isDifferent = localNote.title.trim() !== title || 
+                              localNote.content.trim() !== content || 
+                              localNote.category !== category || 
+                              sheetNoteId !== localNote.id;
+
+            if (isDifferent) {
+              updatesToExecute.push({
+                range: `'${firstSheetName}'!A${index + 1}:E${index + 1}`,
+                values: [[formattedDate, localNote.title, localNote.category || 'Uncategorized', localNote.content, localNote.id]]
+              });
+            }
+          } else {
+            // Not in active notes -> Check if it's marked as deleted
+            if (deletedIds.has(sheetNoteId) || deletedIds.has(compositeKey)) {
+              deletesToExecute.push(index);
             }
           }
-        }));
-
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
-          method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ requests })
-        });
-      }
-
-      // 4. Execute Additions (Append)
-      if (newLocalNotes.length > 0) {
-        const valuesToAppend = newLocalNotes.map(n => {
-          const d = new Date(n.updatedAt || n.createdAt);
-          const formattedDate = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
-          return [formattedDate, n.title, n.category || 'Uncategorized', n.content, ''];
         });
 
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(firstSheetName)}!A1:append?valueInputOption=USER_ENTERED`, {
-          method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ values: valuesToAppend })
-        });
-      }
-
-      // 5. Final Step: Refresh local state from the sheet, but MERGE to preserve local-only fields
-      const finalGetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fetchRange)}`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-
-      if (finalGetResponse.ok) {
-        const finalData = await finalGetResponse.json();
-        const finalRows = finalData.values || [];
-        
-        const sheetNotes: Note[] = finalRows.slice(1).map((row: any[], index: number) => {
-          const [datetime, title, category, noteText] = row;
-          
-          // Try to find matching local note to preserve its properties (id, pinned, locked, color)
-          const matchingLocalNote = localNotesToSync.find(n => n.title === title && n.content === noteText);
-          
-          if (matchingLocalNote) {
-            return {
-              ...matchingLocalNote,
-              category: category || matchingLocalNote.category || 'Uncategorized',
-              updatedAt: datetime || matchingLocalNote.updatedAt || new Date().toISOString(),
-            };
+        // Check for new local notes (not in sheet)
+        notesToSync.forEach(n => {
+          if (deletedIds.has(n.id)) return;
+          if (!localNoteIdsInSheet.has(n.id)) {
+            const d = new Date(n.updatedAt || n.createdAt);
+            const formattedDate = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+            appendsToExecute.push([formattedDate, n.title, n.category || 'Uncategorized', n.content, n.id]);
           }
-
-          return {
-            id: `note_${index}_${Date.now()}`,
-            title: title || 'Untitled',
-            content: noteText || '',
-            category: category || 'Uncategorized',
-            createdAt: datetime || new Date().toISOString(),
-            updatedAt: datetime || new Date().toISOString(),
-            isPinned: false,
-            isLocked: false,
-          };
         });
 
-        setNotes(sheetNotes);
+        // 3. Execute Updates
+        if (updatesToExecute.length > 0) {
+          await sheetFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              valueInputOption: 'USER_ENTERED',
+              data: updatesToExecute
+            })
+          });
+        }
+
+        // 4. Execute Deletions
+        if (deletesToExecute.length > 0) {
+          const sortedIndices = [...deletesToExecute].sort((a, b) => b - a);
+          const requests = sortedIndices.map(idx => ({
+            deleteDimension: {
+              range: { sheetId: firstSheetId, dimension: 'ROWS', startIndex: idx, endIndex: idx + 1 }
+            }
+          }));
+          await sheetFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requests })
+          });
+        }
+
+        // 5. Execute Appends
+        if (appendsToExecute.length > 0) {
+          await sheetFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(firstSheetName)}!A1:append?valueInputOption=USER_ENTERED`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: appendsToExecute })
+          });
+        }
+
+        // 6. Refresh and Merge
+        const finalGetResponse = await sheetFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fetchRange)}`);
+
+        if (finalGetResponse.ok) {
+          const finalData = await finalGetResponse.json();
+          const finalRows = finalData.values || [];
+          const syncTimestamp = Date.now();
+
+          const notesFromSheet: Note[] = finalRows.slice(1).map((row: any[], index: number) => {
+            const sheetId = (row[4] || '').toString().trim();
+            const title = (row[1] || '').toString().trim();
+            const category = (row[2] || '').toString().trim() || 'Uncategorized';
+            const content = (row[3] || '').toString().trim();
+            const updatedAt = row[0] || new Date().toISOString();
+
+            // Try to match with local notes strictly
+            let localMatch = notesToSync.find(n => {
+              if (sheetId && n.id === sheetId) return true;
+              if (!sheetId && n.title.trim() === title && n.content.trim() === content) return true;
+              return false;
+            });
+
+            const id = sheetId || localMatch?.id || `note_sheet_${index}_${syncTimestamp}`;
+
+            return {
+              id,
+              title,
+              category,
+              content,
+              updatedAt,
+              createdAt: localMatch?.createdAt || updatedAt,
+              color: localMatch?.color || 'slate',
+              isPinned: localMatch?.isPinned || false,
+              isLocked: localMatch?.isLocked || false,
+              password: localMatch?.password,
+            };
+          });
+
+          const mergedMap = new Map<string, Note>();
+          notesFromSheet.forEach(n => mergedMap.set(n.id, n));
+          
+          notesToSync.forEach(n => {
+            if (!mergedMap.has(n.id) && !deletedIds.has(n.id)) {
+              mergedMap.set(n.id, n);
+            }
+          });
+
+          setNotes(Array.from(mergedMap.values()));
+        }
+        
+        const now = new Date().toLocaleString('en-GB', { 
+          day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' 
+        }).replace(',', '');
+        setLastSyncTime(now);
+        localStorage.setItem('smart_notepad_last_sync', now);
+        if (!silent) showToast('Sync successful!');
+        return true;
+      } catch (e: any) {
+        console.error('Sync Error:', e);
+        if (!silent) showToast('Sync failed: ' + e.message, 'error');
+        return false;
       }
-      
-      const now = new Date().toLocaleString('en-GB', { 
-        day: '2-digit', month: 'short', year: '2-digit', 
-        hour: '2-digit', minute: '2-digit' 
-      }).replace(',', '');
-      
-      setLastSyncTime(now);
-      localStorage.setItem('smart_notepad_last_sync', now);
-      if (!silent) showToast('Sync successful!');
-    } catch (e: any) {
-      console.error('Sync Error:', e);
-      if (!silent) showToast('Sync failed: ' + e.message, 'error');
-    } finally {
-      setIsSyncing(false);
+    };
+
+    let currentToSync = currentNotes || notes;
+    await performSync(currentToSync);
+
+    // If another sync was requested while this one was running, run again once
+    if (syncRequestedRef.current) {
+      // Use the latest notes state for the follow-up sync
+      // We need to get the latest notes because they might have changed
+      // But since setNotes is async, we might not have them yet in 'notes' variable.
+      // However, for simplicity, we'll just run one more sync.
+      await performSync(currentToSync);
     }
+    
+    setSyncInProgress(false);
   };
 
   const handleRenameCategory = (oldName: string, newName: string) => {
@@ -1144,6 +1240,7 @@ export default function App() {
         onColorFilterChange={setActiveColorFilter}
         onSync={handleSync}
         lastSyncTime={lastSyncTime}
+        isSyncing={syncInProgress}
       />
 
       {/* Main Workspace Layout */}
