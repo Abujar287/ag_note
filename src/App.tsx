@@ -145,6 +145,7 @@ export default function App() {
   });
   const [isTrashView, setIsTrashView] = useState<boolean>(false);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+  const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
 
   // Password Unlock State (Set of note IDs unlocked in current session)
   const [unlockedNoteIds, setUnlockedNoteIds] = useState<Set<string>>(new Set());
@@ -301,6 +302,9 @@ export default function App() {
         if (note.category !== activeCategory) return false;
       }
 
+      // Color filter
+      if (activeColorFilter && note.color !== activeColorFilter) return false;
+
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -334,7 +338,7 @@ export default function App() {
     });
 
     return result;
-  }, [notes, activeCategory, searchQuery, sortMode, unlockedNoteIds]);
+  }, [notes, activeCategory, searchQuery, sortMode, unlockedNoteIds, activeColorFilter]);
 
   // ==================== Actions ====================
 
@@ -827,7 +831,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-white text-black flex flex-col relative">
+    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-slate-50 text-slate-900 flex flex-col relative">
       {/* Top Navbar with AG Note Circular Text Logo (No + button in header) */}
       <Navbar
         searchQuery={searchQuery}
@@ -845,6 +849,8 @@ export default function App() {
         onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
         unlockedCount={unlockedNoteIds.size}
         onLockAll={handleLockAll}
+        activeColorFilter={activeColorFilter}
+        onColorFilterChange={setActiveColorFilter}
       />
 
       {/* Main Workspace Layout */}

@@ -367,7 +367,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
                         key={c.id}
                         type="button"
                         onClick={() => setColor(c.id)}
-                        className={`w-3 h-3 rounded-full ${c.bgClass} transition-transform ${color === c.id ? 'ring-2 ring-black ring-offset-2 scale-125' : 'opacity-40 hover:opacity-70'}`}
+                        className={`w-5 h-5 rounded-full ${c.bgClass} transition-transform ${color === c.id ? 'ring-2 ring-white ring-offset-2 ring-offset-[#12211A] scale-125' : 'opacity-60 hover:opacity-100'}`}
                       />
                     ))}
                   </div>

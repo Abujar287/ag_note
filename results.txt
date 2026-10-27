@@ -1,0 +1,108 @@
+src/App.tsx:    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-slate-50 text-slate-900 flex flex-col relative">
+src/App.tsx:                      className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors cursor-pointer"
+src/App.tsx:                      className="text-xs text-slate-500 font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+src/App.tsx:                <div className="flex flex-col items-center justify-center py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8">
+src/App.tsx:                  <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-3">
+src/App.tsx:                    className="mt-4 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+src/components/ViewNoteModal.tsx:      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+src/components/ViewNoteModal.tsx:        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
+src/components/ViewNoteModal.tsx:                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+src/components/ViewNoteModal.tsx:                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+src/components/ViewNoteModal.tsx:        <div className="px-5 sm:px-6 py-3.5 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+src/components/ViewNoteModal.tsx:              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs cursor-pointer"
+src/components/ViewNoteModal.tsx:              className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs cursor-pointer"
+src/components/TrashView.tsx:      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white border border-black/10 rounded-2xl">
+src/components/TrashView.tsx:            className="p-1.5 text-black hover:bg-black/5 rounded-xl transition-colors cursor-pointer"
+src/components/TrashView.tsx:              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-2xs cursor-pointer"
+src/components/TrashView.tsx:        <div className="flex flex-col items-center justify-center py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8">
+src/components/TrashView.tsx:          <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-3">
+src/components/TrashView.tsx:                className="flex flex-col justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
+src/components/Navbar.tsx:            className="p-1.5 md:hidden text-black hover:bg-black/5 rounded-lg transition-colors cursor-pointer shrink-0"
+src/components/Navbar.tsx:              className="w-full pl-9 pr-7 py-2 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-sm focus:outline-none text-slate-900 placeholder:text-slate-400 transition-all"
+src/components/Navbar.tsx:            className="p-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer"
+src/components/Navbar.tsx:            className="p-1.5 sm:p-2 text-black hover:bg-black/5 rounded-lg sm:rounded-xl border border-black/10 transition-colors cursor-pointer"
+src/components/Navbar.tsx:            className="hidden md:flex p-2 text-black hover:bg-black/5 rounded-xl border border-black/10 transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
+src/components/Navbar.tsx:            className="hidden md:flex p-2 text-black hover:bg-black/5 rounded-xl border border-black/10 transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
+src/components/Navbar.tsx:            className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/20 rounded-lg text-xs focus:outline-none text-black placeholder:text-black/40"
+src/components/DeleteConfirmModal.tsx:      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+src/components/DeleteConfirmModal.tsx:        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 animate-in zoom-in-95 duration-150"
+src/components/DeleteConfirmModal.tsx:            className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+src/components/NoteCard.tsx:        className={`group relative flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border bg-white transition-all cursor-pointer hover:shadow-xs ${
+src/components/NoteCard.tsx:            ? 'border-black bg-black/5 ring-1 ring-black'
+src/components/NoteCard.tsx:            <span className="font-bold text-[10px] text-black/60 uppercase tracking-widest hidden xl:inline bg-black/5 px-2 py-0.5 rounded">
+src/components/NoteCard.tsx:              className="p-1 text-black/30 hover:text-amber-500 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+src/components/NoteCard.tsx:              className="p-1 text-black/30 hover:text-black rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+src/components/NoteCard.tsx:              className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+src/components/NoteCard.tsx:              className="p-1 text-black/30 hover:text-rose-600 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+src/components/NoteCard.tsx:                  ? 'text-amber-500 hover:text-amber-600 hover:bg-black/5'
+src/components/NoteCard.tsx:                  : 'text-black/30 hover:text-amber-500 hover:bg-black/5'
+src/components/NoteCard.tsx:      className={`group relative flex flex-col justify-between p-3.5 rounded-xl border bg-white transition-all cursor-pointer hover:shadow-md ${
+src/components/NoteCard.tsx:          ? 'border-black bg-black/5 ring-1 ring-black'
+src/components/NoteCard.tsx:                : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+src/components/PasswordModal.tsx:      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+src/components/PasswordModal.tsx:        className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-4 animate-in zoom-in-95 duration-150 relative"
+src/components/PasswordModal.tsx:                className="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 font-mono transition-colors"
+src/components/PasswordModal.tsx:              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+src/components/PWAInstallBanner.tsx:            <div className="w-6 h-6 rounded-full bg-white text-blue-600 flex items-center justify-center font-black text-[9px] shrink-0 shadow-2xs">
+src/components/PWAInstallBanner.tsx:              className="bg-white text-blue-700 hover:bg-blue-50 font-bold px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1 transition-transform active:scale-95 shadow-2xs cursor-pointer"
+src/components/PWAInstallBanner.tsx:        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
+src/components/PWAInstallBanner.tsx:          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
+src/components/PWAInstallBanner.tsx:            <div className="space-y-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+src/components/PWAInstallBanner.tsx:        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+src/components/PWAInstallBanner.tsx:          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-2xl space-y-4">
+src/components/Sidebar.tsx:          className="fixed inset-0 z-40 bg-slate-900/50 md:hidden backdrop-blur-xs"
+src/components/Sidebar.tsx:        className={`fixed md:sticky md:top-[76px] md:self-start md:max-h-[calc(100vh-88px)] inset-y-0 left-0 z-40 w-64 max-w-[80vw] shrink-0 bg-white dark:bg-slate-900 border-r md:border-r-0 md:bg-transparent md:dark:bg-transparent p-4 md:p-0 flex flex-col gap-4 overflow-y-auto transition-transform duration-200 ease-in-out ${
+src/components/Sidebar.tsx:        <div className="bg-white p-3 rounded-2xl border border-black/10 shadow-sm space-y-1">
+src/components/Sidebar.tsx:                ? 'bg-black text-white'
+src/components/Sidebar.tsx:                : 'text-black hover:bg-black/5'
+src/components/Sidebar.tsx:                ? 'bg-black text-white'
+src/components/Sidebar.tsx:                : 'text-black hover:bg-black/5'
+src/components/Sidebar.tsx:                ? 'bg-black text-white'
+src/components/Sidebar.tsx:                : 'text-black hover:bg-black/5'
+src/components/Sidebar.tsx:                ? 'bg-black text-white'
+src/components/Sidebar.tsx:                : 'text-black hover:bg-black/5'
+src/components/Sidebar.tsx:                : 'text-black hover:bg-black/5'
+src/components/Sidebar.tsx:        <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
+src/components/Sidebar.tsx:                      ? 'bg-black text-white'
+src/components/Sidebar.tsx:                      : 'text-black hover:bg-black/5'
+src/components/Sidebar.tsx:                        className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
+src/components/Sidebar.tsx:        <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-1.5">
+src/components/Sidebar.tsx:            className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+src/components/Sidebar.tsx:          <div className="md:hidden bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
+src/components/Sidebar.tsx:                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+src/components/Sidebar.tsx:                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+src/components/Toast.tsx:      className="fixed bottom-22 right-4 sm:bottom-24 sm:right-6 z-50 flex items-center gap-3 px-4 py-3 bg-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-100 rounded-xl shadow-2xl border border-slate-700/60 transition-all transform animate-in fade-in slide-in-from-bottom-3 duration-200 max-w-md text-xs sm:text-sm"
+src/components/BatchCategoryModal.tsx:    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+src/components/BatchCategoryModal.tsx:        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+src/components/BatchCategoryModal.tsx:            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+src/components/BatchCategoryModal.tsx:                  <span className="text-xs text-slate-400 font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 group-hover:text-blue-600">
+src/components/BatchCategoryModal.tsx:                  className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-xl border border-blue-400 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+src/components/BatchCategoryModal.tsx:                  className="px-2.5 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+src/components/BatchCategoryModal.tsx:        <div className="px-5 py-3 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-200/80 dark:border-slate-800 flex justify-end">
+src/components/BatchCategoryModal.tsx:            className="px-4 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+src/components/NoteModal.tsx:      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 p-0 sm:p-4"
+src/components/NoteModal.tsx:        className="w-full h-full sm:h-auto sm:max-h-[95vh] sm:max-w-3xl bg-white sm:rounded-2xl shadow-2xl border-black/10 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+src/components/NoteModal.tsx:        <div className="px-5 py-3.5 border-b border-black/10 flex items-center justify-between bg-white sticky top-0 z-10">
+src/components/NoteModal.tsx:        <div className="flex-1 overflow-y-auto flex flex-col bg-white">
+src/components/NoteModal.tsx:                  className="w-full px-4 py-2 bg-white border border-black/20 rounded-xl text-sm font-bold focus:outline-none focus:border-black text-black placeholder:text-black/30 transition-all"
+src/components/NoteModal.tsx:                  className="w-full px-4 py-2 bg-white border border-black/20 rounded-xl text-sm font-bold focus:outline-none focus:border-black text-black cursor-pointer transition-all"
+src/components/NoteModal.tsx:                        : 'bg-black/5 text-black hover:bg-black/10'
+src/components/NoteModal.tsx:                className="flex-1 w-full p-4 bg-white border border-black/10 rounded-2xl text-sm sm:text-base leading-relaxed focus:outline-none focus:border-black/30 text-black placeholder:text-black/30 resize-none transition-all font-sans"
+src/components/NoteModal.tsx:              <div className="animate-in slide-in-from-top-2 duration-200 p-4 rounded-2xl bg-black/5 border border-black/10">
+src/components/NoteModal.tsx:                    className="w-full pl-3 pr-10 py-2 bg-white border border-black/20 rounded-xl text-xs font-mono text-black focus:outline-none focus:border-black/30"
+src/components/CategoryModal.tsx:      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+src/components/CategoryModal.tsx:        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col"
+src/components/CategoryModal.tsx:              className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-colors"
+src/components/CategoryModal.tsx:                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 transition-colors"
+src/components/CategoryModal.tsx:                        className="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+src/components/CategoryModal.tsx:                        className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+src/components/CategoryModal.tsx:            className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+src/components/FloatingBatchBar.tsx:      <div className="bg-black text-white rounded-2xl shadow-2xl p-3 sm:p-4 border border-white/10 flex items-center justify-between gap-4">
+src/components/FloatingBatchBar.tsx:          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-black shrink-0">
+src/components/FloatingBatchBar.tsx:            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group"
+src/components/FloatingBatchBar.tsx:            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group"
+src/components/FloatingBatchBar.tsx:          <div className="w-px h-8 bg-white/20 mx-1" />
+src/components/FloatingBatchBar.tsx:            className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+src/types/note.ts:    bgClass: 'bg-slate-500',
+src/types/note.ts:    dotClass: 'bg-slate-500',
+src/types/note.ts:    subtleBgClass: 'bg-slate-50/70 dark:bg-slate-900/30',
