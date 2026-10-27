@@ -40,10 +40,10 @@ export const PWAInstallBanner: React.FC = () => {
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 py-2 text-xs flex items-center justify-between gap-2 shadow-sm border-b border-blue-500/30">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-6 h-6 rounded-full bg-white text-blue-600 flex items-center justify-center font-black text-[9px] shrink-0 shadow-2xs">
-              SBN
+              AG
             </div>
             <p className="truncate font-medium">
-              <span className="font-bold">Smart Bangla Notepad মোবাইল অ্যাপ:</span> কোনো ব্রাউজার বার ছাড়া আসল অ্যাপের মতো ব্যবহার করুন
+              <span className="font-bold">NOTEPAD মোবাইল অ্যাপ:</span> কোনো ব্রাউজার বার ছাড়া আসল অ্যাপের মতো ব্যবহার করুন
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -74,7 +74,7 @@ export const PWAInstallBanner: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex flex-col items-center justify-center shadow-md">
-                  <span className="text-xs font-black">SBN</span>
+                  <span className="text-xs font-black">AG</span>
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -132,7 +132,7 @@ export const PWAInstallBanner: React.FC = () => {
               <div className="flex items-start gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
                 <p>
-                  ইনস্টল সম্পন্ন হলে আপনার মোবাইলের হোমস্ক্রিনে <strong>Smart Bangla Notepad</strong> আইকন চলে আসবে এবং সরাসরি ক্লিক করলেই ব্রাউজারের কোনো অ্যাড্রেস বার বা লিঙ্ক ছাড়া ফুলস্ক্রিন মোবাইল অ্যাপ হিসেবে চালু হবে!
+                  ইনস্টল সম্পন্ন হলে আপনার মোবাইলের হোমস্ক্রিনে <strong>NOTEPAD</strong> আইকন চলে আসবে এবং সরাসরি ক্লিক করলেই ব্রাউজারের কোনো অ্যাড্রেস বার বা লিঙ্ক ছাড়া ফুলস্ক্রিন মোবাইল অ্যাপ হিসেবে চালু হবে!
                 </p>
               </div>
             </div>
@@ -168,7 +168,7 @@ export const PWAInstallHeaderButton: React.FC = () => {
             setShowGuide(true);
           }
         }}
-        title="Install Smart Bangla Notepad as Mobile App"
+        title="Install NOTEPAD as Mobile App"
         className="px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg sm:rounded-xl border border-blue-200 dark:border-blue-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
       >
         <Smartphone className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />

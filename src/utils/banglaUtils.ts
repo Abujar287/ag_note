@@ -25,8 +25,11 @@ export function formatDate(isoString: string, includeTime = false): string {
     const options: Intl.DateTimeFormatOptions = {
       month: 'short',
       day: 'numeric',
-      year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     };
+
+    if (d.getFullYear() !== now.getFullYear()) {
+      options.year = 'numeric';
+    }
 
     if (includeTime) {
       options.hour = 'numeric';
@@ -34,7 +37,12 @@ export function formatDate(isoString: string, includeTime = false): string {
       options.hour12 = true;
     }
 
-    return d.toLocaleDateString('en-US', options);
+    const formatted = d.toLocaleDateString('en-US', options);
+    // Convert "Oct 26" to "oct-26" if possible
+    if (!includeTime && d.getFullYear() === now.getFullYear()) {
+       return formatted.replace(' ', '-').toLowerCase();
+    }
+    return formatted;
   } catch {
     return 'Unknown date';
   }

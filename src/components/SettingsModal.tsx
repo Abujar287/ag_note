@@ -9,7 +9,18 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, initialUrl }) => {
+  const [url, setUrl] = useState(initialUrl);
+
+  useEffect(() => {
+    setUrl(initialUrl);
+  }, [initialUrl]);
+
   if (!isOpen) return null;
+
+  const handleSave = () => {
+    onSave(url);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#14241D]/80 backdrop-blur-sm p-4" onClick={onClose}>
@@ -25,29 +36,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
 
         <div className="space-y-4">
           <div className="p-4 bg-[#12211A] border border-[#244234] rounded-xl">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-[#D4AF37]/10 flex items-center justify-center">
                 <LinkIcon className="w-4 h-4 text-[#D4AF37]" />
               </div>
               <label className="text-xs font-bold text-[#8DA89B] uppercase tracking-wider">
-                Target Google Sheet
+                Sync Status
               </label>
             </div>
-            <div className="font-mono text-xs text-[#F0F7F4] break-all bg-[#0d1a14] p-2 rounded-lg border border-[#244234]/50">
-              {initialUrl}
+            
+            <div className="bg-[#0d1a14] p-4 rounded-lg border border-[#244234]">
+                <p className="text-xs text-[#F0F7F4] mb-2">Connected to official sync sheet:</p>
+                <code className="block text-[10px] text-[#D4AF37] break-all bg-[#14241D] p-2 rounded border border-[#D4AF37]/20">
+                    {initialUrl}
+                </code>
             </div>
-            <p className="text-[10px] text-[#8DA89B] mt-3 italic leading-relaxed">
-              Google Sheet link is now fixed for automatic sync. Manual input is no longer required.
+            
+            <p className="text-[10px] text-[#8DA89B] mt-4 italic leading-relaxed">
+              Sync is <strong>automatic</strong>. Your notes are securely backed up to this Google Sheet.
             </p>
           </div>
         </div>
 
-        <div className="mt-8 flex justify-end gap-3">
+        <div className="mt-8 flex justify-end">
           <button
             onClick={onClose}
-            className="px-8 py-2.5 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[#D4AF37] hover:bg-[#D4AF37]/90 rounded-xl shadow-lg transition-transform active:scale-95"
+            className="px-8 py-2.5 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[#D4AF37] hover:bg-[#D4AF37]/90 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
           >
-            Done
+            Close Settings
           </button>
         </div>
       </div>

@@ -80,20 +80,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* The Logo: Circular badge */}
             <div
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[var(--accent-gold)] text-[var(--bg-main)] flex flex-col items-center justify-center shrink-0 select-none cursor-default shadow-md"
-              title="Smart Bangla Notepad"
+              title="NOTEPAD"
             >
               <span className="text-[14px] font-black tracking-tight leading-none font-sans">
-                SBN
+                AG
               </span>
             </div>
 
             <div className="leading-tight min-w-0">
               <h1 className="text-sm sm:text-base font-black tracking-tight text-[var(--text-primary)] truncate uppercase">
-                Smart Notepad
+                NOTEPAD
               </h1>
               <div className="flex flex-col">
                 <p className="text-[9px] sm:text-[10px] font-bold text-[var(--text-primary)]/70 hidden sm:block truncate uppercase tracking-wider">
-                  Smart Bangla Notepad
+                  AG Notepad
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="text-[9px] text-[var(--text-primary)]/50 font-mono">

@@ -46,10 +46,18 @@ const getDeletedNoteIds = (): Set<string> => {
   return new Set();
 };
 
-const addDeletedNoteIds = (ids: string[]) => {
+const addDeletedNoteIds = (ids: string[], notes: Note[]) => {
   try {
     const current = getDeletedNoteIds();
-    ids.forEach((id) => current.add(id));
+    ids.forEach((id) => {
+      current.add(id);
+      // Also track by composite key for sheet sync
+      const note = notes.find(n => n.id === id);
+      if (note) {
+        const compositeKey = `del_${note.title}_${note.content.substring(0, 50)}`;
+        current.add(compositeKey);
+      }
+    });
     localStorage.setItem('smart_notepad_deleted_ids', JSON.stringify(Array.from(current)));
   } catch {
     // ignore
@@ -161,8 +169,9 @@ export default function App() {
   const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-  const [googleSheetId] = useState<string>('11h5YrEcSOx7y6_AEFf3phJIoirkgpFtfAsOxpL8T5rk');
+  const FIXED_SHEET_ID = '1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI';
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => localStorage.getItem('smart_notepad_last_sync'));
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Password Unlock Modal state
   const [passwordModal, setPasswordModal] = useState<{
@@ -185,6 +194,8 @@ export default function App() {
       (user) => {
         setUser(user);
         setNeedsAuth(false);
+        // Initial sync on mount if logged in
+        setTimeout(() => handleSync(true), 2000);
       },
       () => {
         setUser(null);
@@ -456,6 +467,7 @@ export default function App() {
       }
       showToast('New note created');
     }
+    handleSync();
   };
 
   // Toggle Pin
@@ -474,6 +486,7 @@ export default function App() {
     if (viewingNote?.id === id) {
       setViewingNote((prev) => (prev ? { ...prev, isPinned: !prev.isPinned } : null));
     }
+    handleSync();
   };
 
   // ==================== Password Lock Handlers ====================
@@ -606,7 +619,7 @@ export default function App() {
           deletedAt: new Date().toISOString(),
         };
 
-        addDeletedNoteIds([note.id]);
+        addDeletedNoteIds([note.id], notes);
         setNotes((prev) => prev.filter((n) => n.id !== note.id));
         setTrashNotes((prev) => [trashedNote, ...prev]);
         setSelectedNoteIds((prev) => prev.filter((id) => id !== note.id));
@@ -621,7 +634,11 @@ export default function App() {
           setTrashNotes((currTrash) => currTrash.filter((t) => t.id !== note.id));
           setNotes((currNotes) => [note, ...currNotes]);
           showToast('Note restored');
+          handleSync();
         });
+        
+        // Auto-sync after moving to trash
+        handleSync();
       },
     });
   };
@@ -660,7 +677,7 @@ export default function App() {
           }
         });
 
-        addDeletedNoteIds(currentSelectedIds);
+        addDeletedNoteIds(currentSelectedIds, notes);
         setNotes(remaining);
         setTrashNotes((prev) => [...toTrash, ...prev]);
         setSelectedNoteIds((prev) => prev.filter(id => !currentSelectedIds.includes(id)));
@@ -684,6 +701,7 @@ export default function App() {
     setTrashNotes((prev) => prev.filter((n) => n.id !== id));
     setNotes((prev) => [{ ...noteToRestore, deletedAt: undefined }, ...prev]);
     showToast('Note restored successfully');
+    handleSync();
   };
 
   // Restore all notes from trash
@@ -695,6 +713,7 @@ export default function App() {
     setNotes((prev) => [...trashNotes.map((n) => ({ ...n, deletedAt: undefined })), ...prev]);
     setTrashNotes([]);
     showToast(`All ${count} notes restored`);
+    handleSync();
   };
 
   // Permanently delete single note from trash
@@ -709,11 +728,11 @@ export default function App() {
       isPermanent: true,
       count: 1,
       onConfirm: () => {
-        addDeletedNoteIds([note.id]);
+        addDeletedNoteIds([note.id], trashNotes);
         setTrashNotes((prev) => prev.filter((n) => n.id !== note.id));
         showToast('Note permanently deleted');
         // Auto-sync after permanent deletion
-        setTimeout(() => handleSync(), 500);
+        handleSync();
       },
     });
   };
@@ -735,11 +754,11 @@ export default function App() {
       isPermanent: true,
       count: deletableNotes.length,
       onConfirm: () => {
-        addDeletedNoteIds(deletableNotes.map((n) => n.id));
+        addDeletedNoteIds(deletableNotes.map((n) => n.id), trashNotes);
         setTrashNotes((prev) => prev.filter(n => n.isLocked));
         showToast('Trash emptied (deletable notes)');
         // Auto-sync after emptying trash
-        setTimeout(() => handleSync(), 500);
+        handleSync();
       },
     });
   };
@@ -789,19 +808,17 @@ export default function App() {
     }
   };
 
-  const handleSaveSettings = () => {
-    showToast('Settings saved successfully');
-  };
-
-  const handleSync = async () => {
-    if (!googleSheetId) {
-      showToast('Sync target not configured', 'error');
-      return;
-    }
+  const handleSync = async (silent = false) => {
+    if (isSyncing) return;
+    setIsSyncing(true);
     
     let accessToken = await getAccessToken();
     
     if (!accessToken) {
+      if (silent) {
+        setIsSyncing(false);
+        return;
+      }
       try {
         const result = await googleSignIn();
         accessToken = result?.accessToken || null;
@@ -809,36 +826,137 @@ export default function App() {
         console.error('Login error during sync:', err);
         showToast('Authentication failed', 'error');
         setNeedsAuth(true);
+        setIsSyncing(false);
         return;
       }
     }
 
     if (!accessToken) {
-      showToast('Authentication required', 'error');
-      setNeedsAuth(true);
+      if (!silent) {
+        showToast('Authentication required', 'error');
+        setNeedsAuth(true);
+      }
+      setIsSyncing(false);
       return;
     }
 
-    const spreadsheetId = googleSheetId;
-
     try {
-      // Prepare data
-      const values = notes.map(n => {
-        const d = new Date(n.updatedAt);
+      const sheetId = FIXED_SHEET_ID;
+
+      // 0. Get the sheet metadata to find the first sheet name
+      const metaResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      if (metaResponse.status === 404) {
+        throw new Error('NOT_FOUND: The spreadsheet ID is invalid or the sheet was deleted.');
+      }
+      if (metaResponse.status === 401) {
+        clearAccessToken();
+        if (!silent) showToast('Session expired, please try again', 'error');
+        setIsSyncing(false);
+        return;
+      }
+      if (!metaResponse.ok) {
+        const errJson = await metaResponse.json().catch(() => ({}));
+        console.error('Sheets API Error Details:', JSON.stringify(errJson));
+        throw new Error(errJson.error?.message || 'Failed to get sheet metadata');
+      }
+
+      const metaData = await metaResponse.json();
+      const firstSheetName = metaData.sheets?.[0]?.properties?.title || 'Sheet1';
+
+      // 1. Fetch current data from the sheet (Source of Truth)
+      const fetchRange = `'${firstSheetName}'!A:E`;
+      const getResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fetchRange)}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      let sheetNotes: Note[] = [];
+      if (getResponse.ok) {
+        const getData = await getResponse.json();
+        const rows = getData.values || [];
+        if (rows.length > 1) { // Skip header
+          // Datetime, Notename, Category, Note, Action
+          sheetNotes = rows.slice(1).map((row: any[], index: number) => {
+            const [datetime, title, category, noteText] = row;
+            // Generate a stable ID based on content/index if not present
+            // In a real app we'd store the ID in the sheet, but sticking to user's CSV format
+            const id = `sheet_note_${index}_${title?.substring(0, 10)}`;
+            return {
+              id,
+              title: title || 'Untitled',
+              content: noteText || '',
+              category: category || 'Uncategorized',
+              createdAt: datetime || new Date().toISOString(),
+              updatedAt: datetime || new Date().toISOString(),
+              isPinned: false,
+              isLocked: false,
+            } as Note;
+          });
+        }
+      }
+
+      // 2. Merge logic:
+      // Since the user says "sheet data thakbe seitai apps a show korbe", 
+      // but also "deleting locally should remove from sheet".
+      // We'll combine: Start with sheet notes, add local notes that aren't in sheet (newly created),
+      // and skip notes that are in the local 'deleted' list.
+      
+      const deletedIds = getDeletedNoteIds();
+      const localNotesToKeep = notes.filter(n => !deletedIds.has(n.id));
+      
+      // If we're doing a manual sync, we'll favor the sheet but keep local additions
+      // For now, let's just make the sheet the absolute source for EXISTING notes,
+      // and local additions are pushed up.
+      
+      const combinedNotesMap = new Map<string, Note>();
+      
+      // Add sheet notes first (they are source of truth)
+      sheetNotes.forEach(n => {
+        // We match by title and content for merging since IDs aren't in sheet
+        const key = `${n.title}|${n.content.substring(0, 50)}`;
+        combinedNotesMap.set(key, n);
+      });
+      
+      // Add local notes that aren't already represented (newly created)
+      localNotesToKeep.forEach(n => {
+        const key = `${n.title}|${n.content.substring(0, 50)}`;
+        if (!combinedNotesMap.has(key)) {
+          combinedNotesMap.set(key, n);
+        }
+      });
+      
+      const finalNotes = Array.from(combinedNotesMap.values());
+
+      // 3. Prepare values for writing back to sheet (Syncing back)
+      const values = finalNotes.map(n => {
+        const d = new Date(n.updatedAt || n.createdAt);
         const formattedDate = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
         return [
           formattedDate,
           n.title,
-          n.category,
+          n.category || 'Uncategorized',
           n.content,
-          '' // Action - placeholder
+          '' // Action
         ];
       });
 
       // Add header
       values.unshift(['Datetime', 'Notename', 'Category', 'Note', 'Action']);
 
-      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A1:E${values.length}?valueInputOption=USER_ENTERED`, {
+      // 4. Clear and Rewrite (to handle deletions and reordering)
+      const clearRange = `'${firstSheetName}'!A1:E5000`; 
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(clearRange)}:clear`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const updateRange = `'${firstSheetName}'!A1:E${values.length}`;
+      const writeResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(updateRange)}?valueInputOption=USER_ENTERED`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${accessToken}`,
@@ -847,27 +965,22 @@ export default function App() {
         body: JSON.stringify({ values })
       });
 
-      if (response.status === 401) {
-        // Token might have expired, clear it and try one re-auth attempt
-        clearAccessToken();
-        showToast('Session expired, please try syncing again', 'error');
-        // We could automatically call googleSignIn here, but it might still prompt.
-        // Let's just clear the token and force user to click again or do it automatically.
-        // For now, let's just show the error.
-        throw new Error('Unauthorized');
+      if (!writeResponse.ok) {
+        const errorData = await writeResponse.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || 'Failed to write back to sheet');
       }
 
-      if (!response.ok) {
-        throw new Error('Failed to sync to Google Sheet');
-      }
-
+      // Update local state
+      setNotes(finalNotes);
       const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
       setLastSyncTime(now);
       localStorage.setItem('smart_notepad_last_sync', now);
-      showToast('Sync successful!');
-    } catch (e) {
-      console.error(e);
-      showToast('Sync failed: ' + (e instanceof Error ? e.message : 'Unknown error'), 'error');
+      if (!silent) showToast('Sync successful!');
+    } catch (e: any) {
+      console.error('Sync Error:', e);
+      if (!silent) showToast('Sync failed: ' + e.message, 'error');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -1271,9 +1384,9 @@ export default function App() {
       {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
-        initialUrl={googleSheetId}
-        onSave={handleSaveSettings}
         onClose={() => setIsSettingsModalOpen(false)}
+        onSave={() => {}}
+        initialUrl={FIXED_SHEET_ID}
       />
 
       {/* Floating Circular Action Button for New Note on Right Side of Display */}
