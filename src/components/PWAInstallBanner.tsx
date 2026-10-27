@@ -43,7 +43,7 @@ export const PWAInstallBanner: React.FC = () => {
               AG
             </div>
             <p className="truncate font-medium text-xs">
-              <span className="font-bold text-[#D4AF37]">NOTEPAD মোবাইল অ্যাপ:</span> কোনো ব্রাউজার বার ছাড়া সরাসরি অ্যাপ হিসেবে ইনস্টল করুন
+              <span className="font-bold text-[#D4AF37]">AG NOTEPAD মোবাইল অ্যাপ:</span> কোনো ব্রাউজার বার ছাড়া সরাসরি অ্যাপ হিসেবে ইনস্টল করুন
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -78,7 +78,7 @@ export const PWAInstallBanner: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-[#F0F7F4]">
-                    স্মার্ট নোটপ্যাড ইনস্টল গাইড
+                    AG NOTEPAD ইনস্টল গাইড
                   </h3>
                   <p className="text-xs text-[#8DA89B]">
                     হোমস্ক্রিনে যুক্ত করে আসল অ্যাপের মতো ব্যবহার করুন

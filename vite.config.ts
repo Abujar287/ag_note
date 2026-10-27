@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'Smart Bangla Notepad - স্মার্ট নোটপ্যাড',
-          short_name: 'Smart Bangla Notepad',
-          description: 'একটি আধুনিক ও দ্রুত বাংলা নোটপ্যাড অ্যাপ। নোট তৈরি, ক্যাটাগরি ও লক সুবিধা।',
+          name: 'AG NOTEPAD - Smart Offline Notepad',
+          short_name: 'AG NOTEPAD',
+          description: 'একটি আধুনিক, সুরক্ষিত ও দ্রুত অফলাইন নোটপ্যাড অ্যাপ। নোট তৈরি, ক্যাটাগরি, লক এবং স্বয়ংক্রিয় ব্যাকআপ সুবিধা।',
           theme_color: '#14241D',
           background_color: '#14241D',
           display: 'standalone',

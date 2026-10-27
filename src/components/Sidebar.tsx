@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed md:sticky md:top-[76px] md:self-start md:max-h-[calc(100vh-88px)] inset-y-0 left-0 z-40 w-64 max-w-[80vw] shrink-0 bg-[var(--bg-card)] border-r border-[var(--border)] md:border-r-0 md:bg-transparent p-4 md:p-0 flex flex-col gap-4 overflow-y-auto transition-transform duration-200 ease-in-out ${
+        className={`fixed md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-96px)] inset-y-0 left-0 z-40 w-64 max-w-[80vw] shrink-0 bg-[var(--bg-card)] border-r border-[var(--border)] md:border-r-0 md:bg-transparent p-4 md:p-0 flex flex-col gap-4 overflow-y-auto transition-transform duration-200 ease-in-out ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -439,6 +439,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Settings Button at the bottom of Menu Tab */}
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={() => {
+              onOpenSettings();
+              if (isMobileOpen) onCloseMobile();
+            }}
+            className="w-full flex items-center justify-center gap-2.5 py-3 px-4 bg-[#162920] hover:bg-[#1F392B] border border-[#2D4A3D] hover:border-[#D4AF37] text-[#F0F7F4] rounded-2xl text-xs font-bold transition-all cursor-pointer shadow-md active:scale-98"
+          >
+            <Settings className="w-4 h-4 text-[#D4AF37]" />
+            <span>সেটিংস (Settings)</span>
+          </button>
+        )}
       </aside>
     </>
   );

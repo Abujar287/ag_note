@@ -388,7 +388,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen max-w-full w-full overflow-x-hidden bg-[#14241D] text-[#F0F7F4] flex flex-col relative">
+    <div className="min-h-screen w-full bg-[#14241D] text-[#F0F7F4] flex flex-col">
       <Navbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -407,7 +407,7 @@ export default function App() {
         onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-[110px] sm:pt-[80px] pb-8 flex-1 w-full flex flex-col md:flex-row gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-8 flex-1 w-full flex flex-col md:flex-row gap-4">
         <Sidebar
           categories={categories}
           activeCategory={activeCategory}
@@ -444,7 +444,42 @@ export default function App() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">{activeCategory === 'all' ? 'All Notes' : activeCategory}</h2>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-lg font-bold">{activeCategory === 'all' ? 'All Notes' : activeCategory}</h2>
+                  {activeColorFilter && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#162920] border border-[#2D4A3D] rounded-full text-xs">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0 shadow-xs ring-1 ring-white/40"
+                        style={{
+                          backgroundColor:
+                            activeColorFilter === 'blue'
+                              ? '#3B82F6'
+                              : activeColorFilter === 'emerald'
+                              ? '#10B981'
+                              : activeColorFilter === 'amber'
+                              ? '#F59E0B'
+                              : activeColorFilter === 'rose'
+                              ? '#F43F5E'
+                              : activeColorFilter === 'purple'
+                              ? '#A855F7'
+                              : activeColorFilter === 'cyan'
+                              ? '#06B6D4'
+                              : '#64748B',
+                        }}
+                      />
+                      <span className="text-[#8DA89B] text-[11px] font-semibold">ফিল্টার চালু</span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveColorFilter(null)}
+                        className="ml-0.5 text-[#8DA89B] hover:text-[#F0F7F4] cursor-pointer"
+                        title="রঙ ফিল্টার বন্ধ করুন"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs text-[#8DA89B] font-semibold">{filteredNotes.length} notes</span>
               </div>
               
               <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>

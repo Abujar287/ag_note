@@ -1,20 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="mask-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e3a8a"/>
-      <stop offset="100%" stop-color="#172554"/>
+      <stop offset="0%" stop-color="#1A3326"/>
+      <stop offset="45%" stop-color="#14241D"/>
+      <stop offset="100%" stop-color="#0E1B15"/>
     </linearGradient>
-    <linearGradient id="circle-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="50%" stop-color="#2563eb"/>
-      <stop offset="100%" stop-color="#1d4ed8"/>
+    <linearGradient id="mask-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE699"/>
+      <stop offset="25%" stop-color="#F2CB60"/>
+      <stop offset="65%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#A68019"/>
     </linearGradient>
+    <linearGradient id="mask-gold-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF5D1"/>
+      <stop offset="100%" stop-color="#8C6A14"/>
+    </linearGradient>
+    <filter id="mask-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
   </defs>
-  <!-- Full bleed background to ensure safe zone margin on Android -->
+
+  <!-- Full-bleed background covering 100% of the canvas -->
   <rect width="512" height="512" fill="url(#mask-bg)"/>
-  <!-- Central circle inside the 80% safe zone -->
-  <circle cx="256" cy="256" r="190" fill="url(#circle-bg)"/>
-  <circle cx="256" cy="256" r="182" fill="none" stroke="#93c5fd" stroke-width="3" stroke-opacity="0.6"/>
-  <text x="256" y="244" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="130" fill="#ffffff" text-anchor="middle" letter-spacing="-1">AG</text>
-  <text x="256" y="340" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="800" font-size="64" fill="#bfdbfe" text-anchor="middle" letter-spacing="6">NOTE</text>
+
+  <!-- Golden Center Badge within 80% safe zone -->
+  <g filter="url(#mask-shadow)">
+    <!-- Base Gold Circle -->
+    <circle cx="256" cy="216" r="136" fill="url(#mask-gold)"/>
+    <circle cx="256" cy="216" r="136" fill="none" stroke="url(#mask-gold-ring)" stroke-width="4.5" stroke-opacity="0.8"/>
+    <circle cx="256" cy="216" r="126" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.45"/>
+    <circle cx="256" cy="216" r="118" fill="none" stroke="#8C6A14" stroke-width="1.5" stroke-opacity="0.4"/>
+  </g>
+
+  <!-- Bold AG Monogram -->
+  <text x="256" y="266" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+        font-weight="900" 
+        font-size="130" 
+        fill="#14241D" 
+        text-anchor="middle" 
+        letter-spacing="-2">AG</text>
+
+  <!-- NOTEPAD Label Pill -->
+  <g filter="url(#mask-shadow)">
+    <rect x="151" y="378" width="210" height="44" rx="22" fill="#12211A" stroke="url(#mask-gold-ring)" stroke-width="2.5"/>
+    <text x="256" y="407" 
+          font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+          font-weight="800" 
+          font-size="18" 
+          fill="#D4AF37" 
+          text-anchor="middle" 
+          letter-spacing="5">NOTEPAD</text>
+  </g>
 </svg>

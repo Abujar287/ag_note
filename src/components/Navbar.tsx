@@ -1,18 +1,16 @@
 import React, { useRef } from 'react';
 import {
-  Search,
   Download,
   Upload,
   LayoutGrid,
   List as ListIcon,
   Menu,
   Lock,
-  X,
-  Settings,
   Plus,
 } from 'lucide-react';
-import { ViewMode, NOTE_COLORS } from '../types/note';
+import { ViewMode } from '../types/note';
 import { PWAInstallHeaderButton } from './PWAInstallBanner';
+import { SearchWithColorFilter } from './SearchWithColorFilter';
 
 interface NavbarProps {
   searchQuery: string;
@@ -58,7 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 w-full bg-[#162920]/95 backdrop-blur-md border-b border-[#2D4A3D] shadow-md">
+    <header className="sticky top-0 z-40 w-full bg-[#162920]/95 backdrop-blur-md border-b border-[#2D4A3D] shadow-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-4">
         {/* Main Header Bar */}
         <div className="h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
@@ -76,9 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Logo Badge */}
             <div
-              onClick={onOpenSettings}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#D4AF37] text-[#14241D] font-black text-sm sm:text-base flex items-center justify-center select-none shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
-              title="Settings"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#D4AF37] text-[#14241D] font-black text-sm sm:text-base flex items-center justify-center select-none shadow-md"
             >
               AG
             </div>
@@ -94,42 +90,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Center: Search & Filter (Desktop/Tablet) */}
-          <div className="hidden sm:flex flex-1 max-w-md items-center gap-2 mx-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8DA89B]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search notes..."
-                className="w-full pl-9 pr-7 py-2 bg-[#12211A] border border-[#2D4A3D] focus:border-[#D4AF37] rounded-xl text-xs text-[#F0F7F4] placeholder-[#8DA89B] focus:outline-none transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8DA89B] hover:text-[#F0F7F4] cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Color Filter */}
-            <select
-              value={activeColorFilter || ''}
-              onChange={(e) => onColorFilterChange((e.target.value as any) || null)}
-              className="py-2 px-2.5 bg-[#12211A] border border-[#2D4A3D] rounded-xl text-xs text-[#F0F7F4] focus:outline-none focus:border-[#D4AF37] cursor-pointer shrink-0"
-              title="Filter by color"
-            >
-              <option value="">All Colors</option>
-              {NOTE_COLORS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  ● {c.label}
-                </option>
-              ))}
-            </select>
+          {/* Center: Search & Direct Color Filter (Desktop/Tablet) */}
+          <div className="hidden sm:flex flex-1 max-w-md items-center mx-2">
+            <SearchWithColorFilter
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              activeColor={activeColorFilter}
+              onColorChange={onColorFilterChange}
+              isMobile={false}
+            />
           </div>
 
           {/* Right: Actions */}
@@ -207,53 +176,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* PWA Install Button (shows if not yet installed) */}
             <PWAInstallHeaderButton />
-
-            {/* Settings Button */}
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              title="Settings"
-              className="p-2 text-[#8DA89B] hover:text-[#D4AF37] hover:bg-[#244234] rounded-xl border border-[#2D4A3D] hover:border-[#D4AF37]/40 transition-colors cursor-pointer"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
         {/* Mobile Search & Color Filter Row */}
-        <div className="pb-2.5 sm:hidden flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8DA89B]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search notes..."
-              className="w-full pl-8 pr-7 py-1.5 bg-[#12211A] border border-[#2D4A3D] rounded-lg text-xs text-[#F0F7F4] placeholder-[#8DA89B] focus:outline-none focus:border-[#D4AF37]"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => onSearchChange('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8DA89B] cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-          <select
-            value={activeColorFilter || ''}
-            onChange={(e) => onColorFilterChange((e.target.value as any) || null)}
-            className="p-1.5 bg-[#12211A] border border-[#2D4A3D] rounded-lg text-xs text-[#F0F7F4] focus:outline-none cursor-pointer shrink-0"
-            title="Filter by color"
-          >
-            <option value="">All</option>
-            {NOTE_COLORS.map((c) => (
-              <option key={c.id} value={c.id}>
-                ● {c.label}
-              </option>
-            ))}
-          </select>
+        <div className="pb-2.5 sm:hidden">
+          <SearchWithColorFilter
+            searchQuery={searchQuery}
+            onSearchChange={onSearchChange}
+            activeColor={activeColorFilter}
+            onColorChange={onColorFilterChange}
+            isMobile={true}
+          />
         </div>
       </div>
     </header>
