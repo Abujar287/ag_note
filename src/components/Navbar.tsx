@@ -57,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-      <header className="fixed top-0 left-0 right-0 z-30 w-full bg-[#221E19]/90 backdrop-blur-md border-b border-[#3D352E]">
+      <header className="fixed top-0 left-0 right-0 z-30 w-full bg-[var(--bg-card)]/90 backdrop-blur-md border-b border-[var(--border)]">
       {/* PWA Mobile App Install Top Banner */}
       <PWAInstallBanner />
 
@@ -67,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={onToggleMobileMenu}
-            className="p-1.5 md:hidden text-[#E0D6C5] hover:bg-[#3D352E] rounded-lg transition-colors cursor-pointer shrink-0"
+            className="p-1.5 md:hidden text-[var(--text-primary)] hover:bg-[var(--border)] rounded-lg transition-colors cursor-pointer shrink-0"
             aria-label="Menu"
           >
             <Menu className="w-5 h-5" />
@@ -76,22 +76,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             {/* The Logo: Circular badge */}
             <div
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-[#C5A059] to-[#8a6d3b] text-[#14110E] flex flex-col items-center justify-center shrink-0 select-none cursor-default shadow-md"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[var(--accent-gold)] text-[var(--bg-main)] flex flex-col items-center justify-center shrink-0 select-none cursor-default shadow-md"
               title="AG Note"
             >
-              <span className="text-[11px] font-black tracking-tight leading-none font-sans">
+              <span className="text-[14px] font-black tracking-tight leading-none font-sans">
                 AG
-              </span>
-              <span className="text-[8px] font-bold tracking-wider leading-none uppercase mt-0.5">
-                Note
               </span>
             </div>
 
             <div className="leading-tight min-w-0">
-              <h1 className="text-sm sm:text-base font-black tracking-tight text-[#E0D6C5] truncate uppercase">
-                AG Note
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-[var(--text-primary)] truncate uppercase">
+                NOTE
               </h1>
-              <p className="text-[9px] sm:text-[10px] font-bold text-[#8DA89B] hidden sm:block truncate uppercase tracking-wider">
+              <p className="text-[9px] sm:text-[10px] font-bold text-[var(--text-primary)]/70 hidden sm:block truncate uppercase tracking-wider">
                 Smart & Secure Notepad
               </p>
             </div>
@@ -101,19 +98,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Zone 2: Desktop Search Bar with Color Filter */}
         <div className="flex-1 max-w-sm hidden sm:flex items-center gap-2 mx-2">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8DA89B]" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-primary)]/70" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search notes..."
-              className="w-full pl-9 pr-7 py-2 bg-[#12100d] border border-[#3D352E] focus:border-[#C5A059] rounded-xl text-sm focus:outline-none text-[#E0D6C5] placeholder-[#8DA89B] transition-all"
+              className="w-full pl-9 pr-7 py-2 bg-[var(--bg-main)] border border-[var(--border)] focus:border-[var(--accent-gold)] rounded-xl text-sm focus:outline-none text-[var(--text-primary)] placeholder-[var(--text-primary)]/70 transition-all"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8DA89B] hover:text-[#E0D6C5] cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-primary)]/70 hover:text-[var(--text-primary)] cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -123,7 +120,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <select
             value={activeColorFilter || ''}
             onChange={(e) => onColorFilterChange(e.target.value as any || null)}
-            className="p-2 bg-[#12100d] border border-[#3D352E] rounded-xl text-sm text-[#E0D6C5] focus:outline-none focus:border-[#C5A059] cursor-pointer"
+            className="p-2 bg-[var(--bg-main)] border border-[var(--border)] rounded-xl text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-gold)] cursor-pointer"
             title="Filter by color"
           >
             <option value="">All</option>
@@ -144,11 +141,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={onLockAll}
               title={`Lock ${unlockedCount} unlocked note${unlockedCount > 1 ? 's' : ''}`}
-              className="px-2.5 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 rounded-lg sm:rounded-xl border border-amber-200 dark:border-amber-900/40 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-2.5 py-1.5 text-xs font-semibold text-[var(--accent-gold)] bg-[var(--accent-gold)]/20 hover:bg-[var(--accent-gold)]/30 rounded-lg sm:rounded-xl border border-[var(--accent-gold)]/50 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
               <Lock className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Lock All</span>
-              <span className="text-[10px] bg-amber-200/80 dark:bg-amber-900/80 px-1.5 py-0.2 rounded-full font-mono">
+              <span className="text-[10px] bg-[var(--accent-gold)]/50 px-1.5 py-0.2 rounded-full font-mono">
                 {unlockedCount}
               </span>
             </button>
@@ -159,7 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onToggleViewMode}
             title={viewMode === 'grid' ? 'Switch to List View' : 'Switch to Grid View'}
-            className="p-1.5 sm:p-2 text-black hover:bg-black/5 rounded-lg sm:rounded-xl border border-black/10 transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 text-[var(--text-primary)] hover:bg-[var(--border)] rounded-lg sm:rounded-xl border border-[var(--border)] transition-colors cursor-pointer"
           >
             {viewMode === 'grid' ? (
               <ListIcon className="w-4 h-4" />
@@ -173,9 +170,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onExportNotes}
             title="Download JSON Backup"
-            className="hidden md:flex p-2 text-black hover:bg-black/5 rounded-xl border border-black/10 transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
+            className="hidden md:flex p-2 text-[var(--text-primary)] hover:bg-[var(--border)] rounded-xl border border-[var(--border)] transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
           >
-            <Download className="w-4 h-4 text-black" />
+            <Download className="w-4 h-4 text-[var(--text-primary)]" />
             <span className="hidden lg:inline">Backup</span>
           </button>
 
@@ -184,9 +181,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             title="Import JSON Backup file"
-            className="hidden md:flex p-2 text-black hover:bg-black/5 rounded-xl border border-black/10 transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
+            className="hidden md:flex p-2 text-[var(--text-primary)] hover:bg-[var(--border)] rounded-xl border border-[var(--border)] transition-colors items-center gap-1.5 text-xs font-black uppercase tracking-widest cursor-pointer"
           >
-            <Upload className="w-4 h-4 text-black" />
+            <Upload className="w-4 h-4 text-[var(--text-primary)]" />
             <span className="hidden lg:inline">Restore</span>
             <input
               type="file"
@@ -196,34 +193,42 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="hidden"
             />
           </button>
-
-
-
-
         </div>
       </div>
-
-      {/* Mobile Search Bar Row */}
-      <div className="px-3 pb-2 sm:hidden">
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      
+      {/* Mobile Search Bar Row - updated to use variables */}
+      <div className="px-3 pb-2 sm:hidden flex gap-2">
+        <div className="relative flex-1">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-primary)]/70" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search notes..."
-            className="w-full pl-8 pr-7 py-1.5 bg-white border border-black/20 rounded-lg text-xs focus:outline-none text-black placeholder:text-black/40"
+            className="w-full pl-8 pr-7 py-1.5 bg-[var(--bg-main)] border border-[var(--border)] rounded-lg text-xs focus:outline-none text-[var(--text-primary)] placeholder-[var(--text-primary)]/70"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-primary)]/70 cursor-pointer"
             >
               <X className="w-3 h-3" />
             </button>
           )}
         </div>
+        {/* Mobile Color Filter Dropdown */}
+        <select
+          value={activeColorFilter || ''}
+          onChange={(e) => onColorFilterChange(e.target.value as any || null)}
+          className="p-1.5 bg-[var(--bg-main)] border border-[var(--border)] rounded-lg text-xs text-[var(--text-primary)] focus:outline-none cursor-pointer"
+          title="Filter by color"
+        >
+          <option value="">All</option>
+          {NOTE_COLORS.map(c => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+          ))}
+        </select>
       </div>
     </header>
   );

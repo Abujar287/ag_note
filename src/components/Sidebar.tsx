@@ -80,23 +80,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed md:sticky md:top-[76px] md:self-start md:max-h-[calc(100vh-88px)] inset-y-0 left-0 z-40 w-64 max-w-[80vw] shrink-0 bg-white dark:bg-slate-900 border-r md:border-r-0 md:bg-transparent md:dark:bg-transparent p-4 md:p-0 flex flex-col gap-4 overflow-y-auto transition-transform duration-200 ease-in-out ${
+        className={`fixed md:sticky md:top-[76px] md:self-start md:max-h-[calc(100vh-88px)] inset-y-0 left-0 z-40 w-64 max-w-[80vw] shrink-0 bg-[var(--bg-card)] border-r border-[var(--border)] md:border-r-0 md:bg-transparent p-4 md:p-0 flex flex-col gap-4 overflow-y-auto transition-transform duration-200 ease-in-out ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Mobile Header */}
-        <div className="flex md:hidden items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <span className="font-bold text-sm text-black">Menu & Filters</span>
+        <div className="flex md:hidden items-center justify-between pb-3 border-b border-[var(--border)]">
+          <span className="font-bold text-sm text-[var(--text-primary)]">Menu & Filters</span>
           <button
             onClick={onCloseMobile}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            className="p-1 rounded-lg text-[var(--text-primary)]/70 hover:text-[var(--text-primary)] cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Primary Views (All Notes, Pinned, Uncategorized, Locked, Trash) */}
-        <div className="bg-white p-3 rounded-2xl border border-black/10 shadow-sm space-y-1">
+        {/* Primary Views */}
+        <div className="bg-[var(--bg-card)] p-3 rounded-2xl border border-[var(--border)] shadow-xs space-y-1">
           {/* All Notes */}
           <button
             type="button"
@@ -107,18 +107,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'all'
-                ? 'bg-black text-white'
-                : 'text-black hover:bg-black/5'
+                ? 'bg-[var(--accent-gold)] text-[var(--bg-main)]'
+                : 'text-[var(--text-primary)] hover:bg-[var(--border)]'
             }`}
           >
             <span className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-500" />
+              <Layers className="w-4 h-4 text-[#10B981]" />
               <span>All Notes</span>
             </span>
-            <span className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-mono tabular-nums text-[11px] text-[var(--text-primary)]/70">
               {totalNotesCount}
             </span>
           </button>
+
 
           {/* Pinned Notes */}
           <button
@@ -130,20 +131,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'pinned'
-                ? 'bg-black text-white'
-                : 'text-black hover:bg-black/5'
+                ? 'bg-[var(--accent-gold)] text-[var(--bg-main)]'
+                : 'text-[var(--text-primary)] hover:bg-[var(--border)]'
             }`}
           >
             <span className="flex items-center gap-2">
-              <Pin className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <Pin className="w-4 h-4 text-[var(--accent-gold)] fill-[var(--accent-gold)]" />
               <span>Pinned Notes</span>
             </span>
-            <span className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-mono tabular-nums text-[11px] text-[var(--text-primary)]/70">
               {pinnedNotesCount}
             </span>
           </button>
 
-          {/* Uncategorized Notes Filter ("je note category assigned nai seitao ami caile filter kore dekhte parbo") */}
+          {/* Uncategorized Notes Filter */}
           <button
             type="button"
             onClick={() => {
@@ -153,15 +154,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'uncategorized'
-                ? 'bg-black text-white'
-                : 'text-black hover:bg-black/5'
+                ? 'bg-[var(--accent-gold)] text-[var(--bg-main)]'
+                : 'text-[var(--text-primary)] hover:bg-[var(--border)]'
             }`}
           >
             <span className="flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-indigo-500" />
+              <HelpCircle className="w-4 h-4 text-[var(--accent-gold)]" />
               <span>Uncategorized</span>
             </span>
-            <span className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-mono tabular-nums text-[11px] text-[var(--text-primary)]/70">
               {uncategorizedCount}
             </span>
           </button>
@@ -176,15 +177,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               !isTrashView && activeCategory === 'locked'
-                ? 'bg-black text-white'
-                : 'text-black hover:bg-black/5'
+                ? 'bg-[var(--accent-gold)] text-[var(--bg-main)]'
+                : 'text-[var(--text-primary)] hover:bg-[var(--border)]'
             }`}
           >
             <span className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-amber-500" />
+              <Lock className="w-4 h-4 text-[var(--accent-gold)]" />
               <span>Locked Notes</span>
             </span>
-            <span className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-mono tabular-nums text-[11px] text-[var(--text-primary)]/70">
               {lockedNotesCount}
             </span>
           </button>
@@ -198,31 +199,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}
             className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
               isTrashView
-                ? 'bg-rose-600 text-white'
-                : 'text-black hover:bg-black/5'
+                ? 'bg-rose-800 text-[var(--text-primary)]'
+                : 'text-[var(--text-primary)] hover:bg-[var(--border)]'
             }`}
           >
             <span className="flex items-center gap-2">
               <Trash2 className="w-4 h-4 text-rose-500" />
               <span>Trash Bin</span>
             </span>
-            <span className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="font-mono tabular-nums text-[11px] text-[var(--text-primary)]/70">
               {trashNotesCount}
             </span>
           </button>
         </div>
 
         {/* Categories List */}
-        <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-2">
+        <div className="bg-[var(--bg-card)] p-3 rounded-2xl border border-[var(--border)] shadow-xs space-y-2">
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-black text-black uppercase tracking-[0.2em]">
+            <span className="text-[10px] font-black text-[var(--text-primary)] uppercase tracking-[0.2em]">
               Categories
             </span>
             <button
               type="button"
               onClick={onOpenCategoryModal}
               title="Add or Manage Categories"
-              className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+              className="text-xs text-[var(--accent-gold)] hover:underline flex items-center gap-1 font-semibold cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Manage</span>
@@ -243,17 +244,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className={`group/cat w-full flex items-center justify-between px-2.5 py-2 text-xs font-bold rounded-xl transition-colors cursor-pointer ${
                     isActive
-                      ? 'bg-black text-white'
-                      : 'text-black hover:bg-black/5'
+                      ? 'bg-[var(--accent-gold)] text-[var(--bg-main)]'
+                      : 'text-[var(--text-primary)] hover:bg-[var(--border)]'
                   }`}
                 >
                   <span className="flex items-center gap-2 truncate flex-1 min-w-0 mr-1">
-                    <Folder className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-black/40'}`} />
+                    <Folder className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[var(--bg-main)]' : 'text-[var(--text-primary)]/40'}`} />
                     <span className="truncate">{cat}</span>
                   </span>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400 group-hover/cat:hidden">
+                    <span className="font-mono tabular-nums text-[11px] text-[var(--text-primary)]/70 group-hover/cat:hidden">
                       {count}
                     </span>
                     <div className="hidden group-hover/cat:flex items-center gap-0.5">
@@ -264,7 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           onOpenCategoryModal();
                         }}
                         title="Edit / Rename"
-                        className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors cursor-pointer"
+                        className="p-1 text-[var(--text-primary)]/50 hover:text-[var(--accent-gold)] hover:bg-[var(--border)] rounded-md transition-colors cursor-pointer"
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
@@ -275,7 +276,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           onDeleteCategory(cat);
                         }}
                         title="Delete category"
-                        className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition-colors cursor-pointer"
+                        className="p-1 text-[var(--text-primary)]/50 hover:text-rose-500 hover:bg-rose-950/30 rounded-md transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
