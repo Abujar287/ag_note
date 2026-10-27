@@ -7,6 +7,8 @@ import {
   Menu,
   Lock,
   Plus,
+  FileSpreadsheet,
+  RefreshCw,
 } from 'lucide-react';
 import { ViewMode } from '../types/note';
 import { PWAInstallHeaderButton } from './PWAInstallBanner';
@@ -30,6 +32,9 @@ interface NavbarProps {
   activeColorFilter: string | null;
   onColorFilterChange: (color: string | null) => void;
   onOpenSettings?: () => void;
+  onSyncSheets?: () => void;
+  isSyncingSheets?: boolean;
+  lastSyncTime?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -48,6 +53,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeColorFilter,
   onColorFilterChange,
   onOpenSettings,
+  onSyncSheets,
+  isSyncingSheets,
+  lastSyncTime,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,14 +101,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               AG
             </div>
 
-            {/* Brand Title */}
+            {/* Brand Title & Last Sync / Sync Button */}
             <div className="flex flex-col">
               <span className="text-sm sm:text-base font-black tracking-tight text-[#F0F7F4] uppercase select-none">
                 AG NOTEPAD
               </span>
-              <span className="text-[10px] text-[#D4AF37] font-semibold tracking-wider">
-                Smart Offline Notepad
-              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] sm:text-xs text-[#8DA89B] font-mono select-none">
+                  {lastSyncTime || '27-Oct-2026 11:35PM'}
+                </span>
+                {onSyncSheets && (
+                  <button
+                    type="button"
+                    onClick={onSyncSheets}
+                    disabled={isSyncingSheets}
+                    title="Google Sheets এ সিঙ্ক করুন"
+                    className="p-1 px-1.5 bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 text-[#D4AF37] rounded-md border border-[#D4AF37]/40 transition-colors flex items-center gap-1 text-[10px] font-bold cursor-pointer disabled:opacity-50 select-none shadow-xs"
+                  >
+                    <RefreshCw className={`w-3 h-3 text-[#10B981] ${isSyncingSheets ? 'animate-spin' : ''}`} />
+                    <span>Sync</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -158,6 +180,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <LayoutGrid className="w-4 h-4" />
               )}
             </button>
+
+
 
             {/* Backup Button (Desktop/Tablet) */}
             <button

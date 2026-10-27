@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'AG NOTEPAD - Smart Offline Notepad',
+          name: 'AG NOTEPAD',
           short_name: 'AG NOTEPAD',
-          description: 'একটি আধুনিক, সুরক্ষিত ও দ্রুত অফলাইন নোটপ্যাড অ্যাপ। নোট তৈরি, ক্যাটাগরি, লক এবং স্বয়ংক্রিয় ব্যাকআপ সুবিধা।',
+          description: 'AG NOTEPAD - Smart Offline & Cloud Notepad. একটি আধুনিক ও দ্রুত বাংলা নোটপ্যাড অ্যাপ।',
           theme_color: '#14241D',
           background_color: '#14241D',
           display: 'standalone',
@@ -24,6 +24,12 @@ export default defineConfig(() => {
           start_url: '/',
           scope: '/',
           icons: [
+            {
+              src: '/icon.svg',
+              sizes: '512x512',
+              type: 'image/svg+xml',
+              purpose: 'any maskable',
+            },
             {
               src: '/pwa-192x192.png',
               sizes: '192x192',

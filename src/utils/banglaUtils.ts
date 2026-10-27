@@ -51,18 +51,20 @@ export function formatDate(isoString: string, includeTime = false): string {
 /**
  * Extracts the first non-empty line of content for ultra-compact display
  */
-export function getFirstLine(text: string): string {
-  if (!text) return '';
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+export function getFirstLine(text: any): string {
+  if (text === null || text === undefined) return '';
+  const str = String(text);
+  const lines = str.split('\n').map((l) => l.trim()).filter(Boolean);
   return lines[0] || '';
 }
 
-export function countWordsAndChars(text: string): { words: number; chars: number } {
-  if (!text) return { words: 0, chars: 0 };
-  const trimmed = text.trim();
+export function countWordsAndChars(text: any): { words: number; chars: number } {
+  if (text === null || text === undefined) return { words: 0, chars: 0 };
+  const str = String(text);
+  const trimmed = str.trim();
   const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
   return {
     words,
-    chars: text.length,
+    chars: str.length,
   };
 }

@@ -13,6 +13,10 @@ import {
   CheckCircle2,
   Smartphone,
   RefreshCw,
+  FileSpreadsheet,
+  ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { MASTER_PASSWORD } from '../types/note';
 import { usePWAInstall } from '../utils/usePWAInstall';
@@ -28,6 +32,10 @@ interface SettingsModalProps {
   onExportNotes: () => void;
   onImportNotes: (file: File) => void;
   onEmptyTrash?: () => void;
+  sheetsUrl: string;
+  onSaveSheetsUrl: (url: string) => void;
+  onSyncSheets: () => void;
+  isSyncingSheets: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -41,11 +49,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onExportNotes,
   onImportNotes,
   onEmptyTrash,
+  sheetsUrl,
+  onSaveSheetsUrl,
+  onSyncSheets,
+  isSyncingSheets,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isInstallable, isInstalled, install } = usePWAInstall();
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const [scriptUrlInput, setScriptUrlInput] = useState(sheetsUrl);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const appsScriptCode = `function doGet(e) {
+  var sheet = SpreadsheetApp.openById("1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI").getActiveSheet();
+  var rows = sheet.getDataRange().getValues();
+  var data = [];
+  var startRow = (rows.length > 0 && rows[0][0] === "Datetime") ? 1 : 0;
+  for (var i = startRow; i < rows.length; i++) {
+    var row = rows[i];
+    if (row[4] !== "DELETE" && row[1]) {
+      data.push({
+        datetime: row[0] || "",
+        notename: row[1] || "Untitled",
+        category: row[2] || "General",
+        note: row[3] || "",
+        action: row[4] || "CREATE"
+      });
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.openById("1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI").getActiveSheet();
+  try {
+    var data = JSON.parse(e.postData.contents);
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Datetime", "Notename", "Category", "Note", "Action"]);
+    }
+    var actionType = data.action || "CREATE";
+    if (actionType === "DELETE") {
+      var rows = sheet.getDataRange().getValues();
+      for (var i = rows.length - 1; i >= 1; i--) {
+        if (rows[i][1] === data.notename) {
+          sheet.deleteRow(i + 1);
+        }
+      }
+    } else {
+      sheet.appendRow([
+        data.datetime || new Date().toLocaleString(),
+        data.notename || "Untitled",
+        data.category || "General",
+        data.note || "",
+        actionType
+      ]);
+    }
+    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
 
   if (!isOpen) return null;
 
@@ -222,6 +289,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>{updateMessage}</span>
               </p>
             )}
+          </div>
+
+          {/* Google Sheets & Apps Script Integration */}
+          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-[#10B981]" />
+                <span>Google Sheets সিঙ্ক ও Apps Script</span>
+              </h4>
+              <a
+                href="https://docs.google.com/spreadsheets/d/1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI/edit"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-[#10B981] hover:underline flex items-center gap-1 font-semibold"
+              >
+                <span>Google Sheet খুলুন</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            <p className="text-xs text-[#8DA89B] leading-relaxed">
+              আপনার সমস্ত নোট Google Sheet-এ (<span className="font-mono text-[#D4AF37]">1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI</span>) Datetime, Notename, Category, Note এবং Action সহ সিঙ্ক করতে নিচের Apps Script কোডটি আপনার গুগল শিটে স্থাপন (Deploy) করুন।
+            </p>
+
+            {/* Apps Script Web App URL input */}
+            <div className="space-y-1.5 pt-1">
+              <label className="block text-[11px] font-bold text-[#D4AF37]">
+                Google Apps Script Web App URL:
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={scriptUrlInput}
+                  onChange={(e) => setScriptUrlInput(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  className="flex-1 px-3 py-2 bg-[#162920] border border-[#2D4A3D] rounded-xl text-xs text-[#F0F7F4] placeholder-[#8DA89B] focus:outline-none focus:border-[#D4AF37]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSaveSheetsUrl(scriptUrlInput);
+                  }}
+                  className="px-4 py-2 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#14241D] font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs shrink-0"
+                >
+                  সংরক্ষণ
+                </button>
+              </div>
+            </div>
+
+
+
+            {/* Apps Script Code snippet accordion / container */}
+            <div className="space-y-1.5 pt-2 border-t border-[#2D4A3D]">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#F0F7F4]">
+                  Google Apps Script কোড (Apps Script Code):
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(appsScriptCode);
+                    setCopiedCode(true);
+                    setTimeout(() => setCopiedCode(false), 2000);
+                  }}
+                  className="text-[11px] text-[#D4AF37] hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                >
+                  {copiedCode ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedCode ? 'কপি হয়েছে!' : 'কোড কপি করুন'}</span>
+                </button>
+              </div>
+              <pre className="p-3 bg-[#0d1712] border border-[#2D4A3D] rounded-xl text-[10px] font-mono text-[#8DA89B] overflow-x-auto max-h-40 select-all">
+                {appsScriptCode}
+              </pre>
+              <p className="text-[10px] text-[#8DA89B] italic">
+                * শিটে Extensions &gt; Apps Script এ গিয়ে এই কোড দিন, এরপর Deploy &gt; New deployment (Web app, Execute as: Me, Who has access: Anyone) করে প্রাপ্ত Web App URL উপরের বক্সে দিন।
+              </p>
+            </div>
           </div>
 
           {/* Backup & Restore */}

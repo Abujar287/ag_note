@@ -11,7 +11,7 @@ import {
   Folder,
   X,
 } from 'lucide-react';
-import { Note, SortMode, ViewMode, MASTER_PASSWORD } from './types/note';
+import { Note, NoteColor, SortMode, ViewMode, MASTER_PASSWORD } from './types/note';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { NoteCard } from './components/NoteCard';
@@ -81,32 +81,13 @@ export default function App() {
 
   const [notes, setNotes] = useState<Note[]>(() => {
     try {
-      const deletedIds = getDeletedNoteIds();
-      const isInitialized = localStorage.getItem('smart_notepad_initialized_v4');
       const savedV4 = localStorage.getItem('smart_notepad_notes_v4');
-
-      let initialList: Note[] = [];
-
-      if (isInitialized && savedV4 !== null) {
+      if (savedV4 !== null) {
         const parsed = JSON.parse(savedV4);
-        if (Array.isArray(parsed)) initialList = parsed;
-      } else {
-        if (initialList.length === 0 && !isInitialized) {
-          initialList = (importedNotesRaw as Note[]).map((n) => ({
-            ...n,
-            category: n.category || 'Uncategorized',
-          }));
-        }
+        if (Array.isArray(parsed)) return deduplicateNotes(parsed);
       }
-
-      const filtered = initialList.filter((n: Note) => !deletedIds.has(n.id));
-      const deduped = deduplicateNotes(filtered);
-      localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(deduped));
-      localStorage.setItem('smart_notepad_initialized_v4', 'true');
-      return deduped;
-    } catch {
-      return [];
-    }
+    } catch { /* ignore */ }
+    return [];
   });
 
   const [trashNotes, setTrashNotes] = useState<Note[]>(() => {
@@ -161,13 +142,26 @@ export default function App() {
     } catch { /* ignore */ }
   }, [isSidebarOpen]);
 
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-
   const [passwordModal, setPasswordModal] = useState<{
     isOpen: boolean;
     note: Note | null;
     targetAction?: 'view' | 'edit';
   }>({ isOpen: false, note: null, targetAction: 'view' });
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    noteTitle?: string;
+    count?: number;
+    isPermanent?: boolean;
+    onConfirm: () => void;
+  }>({ isOpen: false, onConfirm: () => {} });
+
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', onUndo?: () => void) => {
+    setToast({ id: String(Date.now()), message, type, onUndo });
+  };
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
@@ -208,19 +202,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('smart_notepad_view', viewMode);
   }, [viewMode]);
-
-  const [deleteModal, setDeleteModal] = useState<{
-    isOpen: boolean;
-    noteTitle?: string;
-    count?: number;
-    isPermanent?: boolean;
-    onConfirm: () => void;
-  }>({ isOpen: false, onConfirm: () => {} });
-
-  const [toast, setToast] = useState<ToastData | null>(null);
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', onUndo?: () => void) => {
-    setToast({ id: String(Date.now()), message, type, onUndo });
-  };
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -302,11 +283,101 @@ export default function App() {
     reader.readAsText(file);
   };
 
+  const formatSyncTimestamp = (date = new Date()): string => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const strHours = String(hours).padStart(2, '0');
+    return `${day}-${month}-${year} ${strHours}:${minutes}${ampm}`;
+  };
+
+  const [sheetsUrl, setSheetsUrl] = useState<string>(() => {
+    return localStorage.getItem('smart_notepad_sheets_url') || '';
+  });
+  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
+    try {
+      return localStorage.getItem('smart_notepad_last_sync') || formatSyncTimestamp();
+    } catch {
+      return formatSyncTimestamp();
+    }
+  });
+
+  const handleSaveSheetsUrl = (url: string) => {
+    setSheetsUrl(url);
+    localStorage.setItem('smart_notepad_sheets_url', url);
+    showToast('Google Apps Script URL সংরক্ষিত হয়েছে');
+  };
+
+  const handleSyncToGoogleSheets = async () => {
+    if (!sheetsUrl.trim()) {
+      showToast('দয়া করে Settings থেকে Google Apps Script Web App URL দিন', 'error');
+      setIsSettingsModalOpen(true);
+      return;
+    }
+    setIsSyncingSheets(true);
+    showToast('Google Sheet থেকে ডেটা সিঙ্ক হচ্ছে...', 'info');
+    try {
+      const res = await fetch(sheetsUrl);
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error("Apps Script returned non-JSON text:", text);
+        showToast('Apps Script doGet কোড আপডেট করুন বা সঠিক Web App URL দিন', 'error');
+        setIsSyncingSheets(false);
+        return;
+      }
+
+      if (Array.isArray(data)) {
+        const colors: NoteColor[] = ['blue', 'emerald', 'amber', 'rose', 'purple', 'cyan', 'slate'];
+        const fetchedNotes: Note[] = data.map((item: any, idx: number) => ({
+          id: item.id || `sheet_note_${idx}_${Date.now()}`,
+          title: String(item.title || item.notename || 'Untitled'),
+          category: String(item.category || 'General'),
+          content: String(item.content !== undefined && item.content !== null ? item.content : (item.note !== undefined && item.note !== null ? item.note : '')),
+          color: colors[idx % colors.length],
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: item.datetime || new Date().toISOString(),
+          isPinned: false,
+          isLocked: false
+        }));
+        setNotes(fetchedNotes);
+        localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(fetchedNotes));
+
+        const nowFormatted = formatSyncTimestamp();
+        setLastSyncTime(nowFormatted);
+        localStorage.setItem('smart_notepad_last_sync', nowFormatted);
+
+        showToast(`Google Sheet থেকে ${fetchedNotes.length}টি নোট সফলভাবে সিঙ্ক হয়েছে!`);
+      } else {
+        const nowFormatted = formatSyncTimestamp();
+        setLastSyncTime(nowFormatted);
+        localStorage.setItem('smart_notepad_last_sync', nowFormatted);
+        showToast('শিট থেকে ডেটা ফেচ সম্পন্ন হয়েছে', 'info');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('সিঙ্ক করতে সমস্যা হয়েছে (CORS বা URL চেক করুন)', 'error');
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
   const handleSaveNote = (noteData: any) => {
     const now = new Date().toISOString();
     let updatedNotes: Note[] = [];
+    let savedNote: Note;
     if (noteData.id) {
       updatedNotes = notes.map((n) => n.id === noteData.id ? { ...n, ...noteData, updatedAt: now } : n);
+      savedNote = updatedNotes.find(n => n.id === noteData.id)!;
     } else {
       const newNote: Note = {
         id: `note_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -316,9 +387,26 @@ export default function App() {
         isPinned: false
       };
       updatedNotes = [newNote, ...notes];
+      savedNote = newNote;
     }
     setNotes(updatedNotes);
     showToast(noteData.id ? 'Note updated' : 'New note created');
+
+    // Auto-sync new/updated note to Google Sheet in background if URL is configured
+    if (sheetsUrl.trim()) {
+      fetch(sheetsUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          datetime: new Date().toLocaleString(),
+          notename: savedNote.title || 'Untitled',
+          category: savedNote.category || 'General',
+          note: savedNote.content || '',
+          action: noteData.id ? 'UPDATE' : 'CREATE'
+        })
+      }).catch(() => {});
+    }
   };
 
   const handleTogglePin = (id: string) => {
@@ -416,6 +504,41 @@ export default function App() {
     showToast('Category renamed');
   };
 
+  const handlePermanentDelete = (note: Note) => {
+    setTrashNotes(prev => prev.filter(n => n.id !== note.id));
+    showToast('Note permanently deleted');
+    if (sheetsUrl.trim()) {
+      fetch(sheetsUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notename: note.title || 'Untitled',
+          action: 'DELETE'
+        })
+      }).catch(() => {});
+    }
+  };
+
+  const handleEmptyTrash = () => {
+    const notesToDelete = [...trashNotes];
+    setTrashNotes([]);
+    showToast('Trash emptied');
+    if (sheetsUrl.trim() && notesToDelete.length > 0) {
+      notesToDelete.forEach(note => {
+        fetch(sheetsUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notename: note.title || 'Untitled',
+            action: 'DELETE'
+          })
+        }).catch(() => {});
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#14241D] text-[#F0F7F4] flex flex-col">
       <Navbar
@@ -436,6 +559,9 @@ export default function App() {
         activeColorFilter={activeColorFilter}
         onColorFilterChange={setActiveColorFilter}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onSyncSheets={() => handleSyncToGoogleSheets()}
+        isSyncingSheets={isSyncingSheets}
+        lastSyncTime={lastSyncTime}
       />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-8 flex-1 w-full flex flex-col md:flex-row gap-4">
@@ -469,9 +595,11 @@ export default function App() {
             <TrashView
               trashNotes={trashNotes}
               onRestoreNote={handleRestoreNote}
-              onRestoreAll={() => {}}
-              onRequestPermanentDelete={() => {}}
-              onRequestEmptyTrash={() => {}}
+              onRestoreAll={() => {
+                trashNotes.forEach(n => handleRestoreNote(n.id));
+              }}
+              onRequestPermanentDelete={handlePermanentDelete}
+              onRequestEmptyTrash={handleEmptyTrash}
               onBackToNotes={() => setIsTrashView(false)}
             />
           ) : (
@@ -602,6 +730,10 @@ export default function App() {
           setTrashNotes([]);
           showToast('Trash emptied');
         }}
+        sheetsUrl={sheetsUrl}
+        onSaveSheetsUrl={handleSaveSheetsUrl}
+        onSyncSheets={() => handleSyncToGoogleSheets()}
+        isSyncingSheets={isSyncingSheets}
       />
 
       <button

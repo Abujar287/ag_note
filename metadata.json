@@ -1,6 +1,6 @@
 {
-  "name": "NOTEPAD",
-  "description": "একটি আধুনিক ও দ্রুত বাংলা নোটপ্যাড অ্যাপ। নোট তৈরি, ক্যাটাগরি, ভয়েস টাইপিং, ট্র্যাশ রিকভারি ও ব্যাকআপ সুবিধা।",
+  "name": "AG NOTEPAD",
+  "description": "AG NOTEPAD - Smart Offline & Cloud Notepad. একটি আধুনিক ও দ্রুত বাংলা নোটপ্যাড অ্যাপ। নোট তৈরি, ক্যাটাগরি, ভয়েস টাইপিং, ট্র্যাশ রিকভারি ও গুগল শিট সিঙ্ক সুবিধা।",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
