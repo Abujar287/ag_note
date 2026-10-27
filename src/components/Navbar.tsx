@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { ViewMode, NOTE_COLORS } from '../types/note';
 import { PWAInstallHeaderButton, PWAInstallBanner } from './PWAInstallBanner';
-
 interface NavbarProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
@@ -29,6 +28,8 @@ interface NavbarProps {
   onLockAll?: () => void;
   activeColorFilter: string | null;
   onColorFilterChange: (color: string | null) => void;
+  onSync: () => void;
+  lastSyncTime: string | null;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -45,6 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLockAll,
   activeColorFilter,
   onColorFilterChange,
+  onSync,
+  lastSyncTime,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -88,9 +91,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               <h1 className="text-sm sm:text-base font-black tracking-tight text-[var(--text-primary)] truncate uppercase">
                 NOTE
               </h1>
-              <p className="text-[9px] sm:text-[10px] font-bold text-[var(--text-primary)]/70 hidden sm:block truncate uppercase tracking-wider">
-                Smart & Secure Notepad
-              </p>
+              <div className="flex flex-col">
+                <p className="text-[9px] sm:text-[10px] font-bold text-[var(--text-primary)]/70 hidden sm:block truncate uppercase tracking-wider">
+                  Smart & Secure Notepad
+                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[9px] text-[var(--text-primary)]/50 font-mono">
+                    Last Sync: {lastSyncTime || 'Never'}
+                  </span>
+                  <button 
+                    onClick={onSync}
+                    className="text-[9px] text-[var(--accent-gold)] font-bold hover:underline cursor-pointer"
+                  >
+                    Sync
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

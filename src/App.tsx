@@ -25,7 +25,10 @@ import { TrashView } from './components/TrashView';
 import { Toast, ToastData } from './components/Toast';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { FloatingBatchBar } from './components/FloatingBatchBar';
+import { SettingsModal } from './components/SettingsModal';
 import importedNotesRaw from './data/importedNotes.json';
+import { initAuth, googleSignIn, getAccessToken, clearAccessToken } from './utils/auth';
+import { User } from 'firebase/auth';
 
 const DEFAULT_CATEGORIES = ['General', 'Personal', 'Work', 'Bajar', 'Accounts', 'Links'];
 
@@ -157,6 +160,9 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
   const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [googleSheetUrl, setGoogleSheetUrl] = useState<string>(() => localStorage.getItem('smart_notepad_sheet_url') || '');
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => localStorage.getItem('smart_notepad_last_sync'));
 
   // Password Unlock Modal state
   const [passwordModal, setPasswordModal] = useState<{
@@ -168,6 +174,34 @@ export default function App() {
     note: null,
     targetAction: 'view',
   });
+
+  // Auth State
+  const [needsAuth, setNeedsAuth] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  // Initialize Auth
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user) => {
+        setUser(user);
+        setNeedsAuth(false);
+      },
+      () => {
+        setUser(null);
+        setNeedsAuth(true);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      await googleSignIn();
+      setNeedsAuth(false);
+    } catch (err) {
+      showToast('Login failed', 'error');
+    }
+  };
 
   // Delete Confirmation Modal state
   const [deleteModal, setDeleteModal] = useState<{
@@ -254,7 +288,11 @@ export default function App() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    (window as any)._triggerOpenSettings = () => setIsSettingsModalOpen(true);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      delete (window as any)._triggerOpenSettings;
+    };
   }, []);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', onUndo?: () => void) => {
@@ -718,6 +756,96 @@ export default function App() {
     }
   };
 
+  const handleSaveSettings = (sheetUrl: string) => {
+    localStorage.setItem('smart_notepad_sheet_url', sheetUrl);
+    setGoogleSheetUrl(sheetUrl);
+    showToast('Settings saved successfully');
+  };
+
+  const handleSync = async () => {
+    if (!googleSheetUrl) {
+      showToast('Please set Google Sheet URL in Settings first', 'error');
+      setIsSettingsModalOpen(true);
+      return;
+    }
+    
+    let accessToken = await getAccessToken();
+    
+    if (!accessToken) {
+      try {
+        const result = await googleSignIn();
+        accessToken = result?.accessToken || null;
+      } catch (err) {
+        console.error('Login error during sync:', err);
+        showToast('Authentication failed', 'error');
+        setNeedsAuth(true);
+        return;
+      }
+    }
+
+    if (!accessToken) {
+      showToast('Authentication required', 'error');
+      setNeedsAuth(true);
+      return;
+    }
+
+    const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      showToast('Invalid Google Sheet URL', 'error');
+      return;
+    }
+    const spreadsheetId = match[1];
+
+    try {
+      // Prepare data
+      const values = notes.map(n => {
+        const d = new Date(n.updatedAt);
+        const formattedDate = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+        return [
+          formattedDate,
+          n.title,
+          n.category,
+          n.content,
+          '' // Action - placeholder
+        ];
+      });
+
+      // Add header
+      values.unshift(['Datetime', 'Notename', 'Category', 'Note', 'Action']);
+
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A1:E${values.length}?valueInputOption=USER_ENTERED`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ values })
+      });
+
+      if (response.status === 401) {
+        // Token might have expired, clear it and try one re-auth attempt
+        clearAccessToken();
+        showToast('Session expired, please try syncing again', 'error');
+        // We could automatically call googleSignIn here, but it might still prompt.
+        // Let's just clear the token and force user to click again or do it automatically.
+        // For now, let's just show the error.
+        throw new Error('Unauthorized');
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to sync to Google Sheet');
+      }
+
+      const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+      setLastSyncTime(now);
+      localStorage.setItem('smart_notepad_last_sync', now);
+      showToast('Sync successful!');
+    } catch (e) {
+      console.error(e);
+      showToast('Sync failed: ' + (e instanceof Error ? e.message : 'Unknown error'), 'error');
+    }
+  };
+
   const handleRenameCategory = (oldName: string, newName: string) => {
     const trimmed = newName.trim();
     if (!trimmed || oldName === trimmed) return;
@@ -762,7 +890,7 @@ export default function App() {
         }
         showToast(
           affectedCount > 0
-            ? `Category "${catToDelete}" removed. Notes moved to Uncategorized.`
+            ? `Category "${catToDelete}" removed. Notes moved to General.`
             : `Category "${catToDelete}" removed.`
         );
       },
@@ -851,6 +979,8 @@ export default function App() {
         onLockAll={handleLockAll}
         activeColorFilter={activeColorFilter}
         onColorFilterChange={setActiveColorFilter}
+        onSync={handleSync}
+        lastSyncTime={lastSyncTime}
       />
 
       {/* Main Workspace Layout */}
@@ -1113,6 +1243,14 @@ export default function App() {
         onClose={() => setIsBatchCategoryModalOpen(false)}
       />
 
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        initialUrl={googleSheetUrl}
+        onSave={handleSaveSettings}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
+
       {/* Floating Circular Action Button for New Note on Right Side of Display */}
       <button
         type="button"
@@ -1142,3 +1280,8 @@ export default function App() {
     </div>
   );
 }
+
+// Global listener for settings trigger
+window.addEventListener('openSettings', () => {
+    (window as any)._triggerOpenSettings?.();
+});

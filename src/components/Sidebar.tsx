@@ -12,6 +12,7 @@ import {
   Edit2,
   HelpCircle,
   Lock,
+  Settings,
 } from 'lucide-react';
 import { SortMode } from '../types/note';
 
@@ -376,6 +377,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {trashNotesCount}
             </span>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              onCloseMobile();
+              window.dispatchEvent(new CustomEvent('openSettings'));
+            }}
+            className="w-full mt-2 flex items-center justify-center gap-2 py-2 bg-indigo-800 hover:bg-indigo-700 rounded-lg text-white font-bold text-xs transition-colors cursor-pointer"
+          >
+            <Settings className="w-4 h-4" /> Settings
+          </button>
         </div>
       </aside>
     </>
