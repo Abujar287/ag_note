@@ -404,24 +404,24 @@ export default function App() {
   }) => {
     const now = new Date().toISOString();
 
+    let updatedNotes: Note[];
     if (noteData.id) {
       // Update
-      setNotes((prev) =>
-        prev.map((n) =>
-          n.id === noteData.id
-            ? {
-                ...n,
-                title: noteData.title,
-                content: noteData.content,
-                category: noteData.category,
-                color: noteData.color,
-                isLocked: noteData.isLocked,
-                password: noteData.password,
-                updatedAt: now,
-              }
-            : n
-        )
+      updatedNotes = notes.map((n) =>
+        n.id === noteData.id
+          ? {
+              ...n,
+              title: noteData.title,
+              content: noteData.content,
+              category: noteData.category,
+              color: noteData.color,
+              isLocked: noteData.isLocked,
+              password: noteData.password,
+              updatedAt: now,
+            }
+          : n
       );
+      setNotes(updatedNotes);
 
       // If unlocked, keep unlocked
       if (noteData.isLocked) {
@@ -460,33 +460,36 @@ export default function App() {
         createdAt: now,
         updatedAt: now,
       };
-      setNotes((prev) => [newNote, ...prev]);
+      updatedNotes = [newNote, ...notes];
+      setNotes(updatedNotes);
 
       if (newNote.isLocked) {
         setUnlockedNoteIds((prev) => new Set([...prev, newId]));
       }
       showToast('New note created');
     }
-    handleSync();
+    handleSync(false, updatedNotes);
   };
 
   // Toggle Pin
   const handleTogglePin = (id: string) => {
-    setNotes((prev) =>
-      prev.map((n) => {
+    let updatedNotes: Note[] = [];
+    setNotes((prev) => {
+      updatedNotes = prev.map((n) => {
         if (n.id === id) {
           const nextState = !n.isPinned;
           showToast(nextState ? 'Note pinned' : 'Note unpinned');
           return { ...n, isPinned: nextState, updatedAt: new Date().toISOString() };
         }
         return n;
-      })
-    );
+      });
+      return updatedNotes;
+    });
 
     if (viewingNote?.id === id) {
       setViewingNote((prev) => (prev ? { ...prev, isPinned: !prev.isPinned } : null));
     }
-    handleSync();
+    setTimeout(() => handleSync(true, updatedNotes), 100);
   };
 
   // ==================== Password Lock Handlers ====================
@@ -620,7 +623,8 @@ export default function App() {
         };
 
         addDeletedNoteIds([note.id], notes);
-        setNotes((prev) => prev.filter((n) => n.id !== note.id));
+        const updatedNotes = notes.filter((n) => n.id !== note.id);
+        setNotes(updatedNotes);
         setTrashNotes((prev) => [trashedNote, ...prev]);
         setSelectedNoteIds((prev) => prev.filter((id) => id !== note.id));
 
@@ -632,13 +636,16 @@ export default function App() {
         showToast('Note moved to Trash', 'success', () => {
           removeDeletedNoteIds([note.id]);
           setTrashNotes((currTrash) => currTrash.filter((t) => t.id !== note.id));
-          setNotes((currNotes) => [note, ...currNotes]);
+          setNotes((currNotes) => {
+            const restored = [note, ...currNotes];
+            handleSync(true, restored);
+            return restored;
+          });
           showToast('Note restored');
-          handleSync();
         });
         
         // Auto-sync after moving to trash
-        handleSync();
+        handleSync(false, updatedNotes);
       },
     });
   };
@@ -699,21 +706,21 @@ export default function App() {
 
     removeDeletedNoteIds([id]);
     setTrashNotes((prev) => prev.filter((n) => n.id !== id));
-    setNotes((prev) => [{ ...noteToRestore, deletedAt: undefined }, ...prev]);
+    const restoredNotes = [{ ...noteToRestore, deletedAt: undefined }, ...notes];
+    setNotes(restoredNotes);
     showToast('Note restored successfully');
-    handleSync();
+    handleSync(false, restoredNotes);
   };
 
   // Restore all notes from trash
   const handleRestoreAll = () => {
     if (trashNotes.length === 0) return;
     const count = trashNotes.length;
-    const ids = trashNotes.map((n) => n.id);
-    removeDeletedNoteIds(ids);
-    setNotes((prev) => [...trashNotes.map((n) => ({ ...n, deletedAt: undefined })), ...prev]);
+    const restoredNotes = [...trashNotes.map((n) => ({ ...n, deletedAt: undefined })), ...notes];
+    setNotes(restoredNotes);
     setTrashNotes([]);
     showToast(`All ${count} notes restored`);
-    handleSync();
+    handleSync(false, restoredNotes);
   };
 
   // Permanently delete single note from trash
@@ -732,7 +739,7 @@ export default function App() {
         setTrashNotes((prev) => prev.filter((n) => n.id !== note.id));
         showToast('Note permanently deleted');
         // Auto-sync after permanent deletion
-        handleSync();
+        handleSync(false, notes);
       },
     });
   };
@@ -758,7 +765,7 @@ export default function App() {
         setTrashNotes((prev) => prev.filter(n => n.isLocked));
         showToast('Trash emptied (deletable notes)');
         // Auto-sync after emptying trash
-        handleSync();
+        handleSync(false, notes);
       },
     });
   };
@@ -778,16 +785,16 @@ export default function App() {
   const handleBatchAssignCategory = (targetCategory: string) => {
     if (selectedNoteIds.length === 0) return;
     const count = selectedNoteIds.length;
-    setNotes((prev) =>
-      prev.map((n) =>
-        selectedNoteIds.includes(n.id)
-          ? { ...n, category: targetCategory, updatedAt: new Date().toISOString() }
-          : n
-      )
+    const updatedNotes = notes.map((n) =>
+      selectedNoteIds.includes(n.id)
+        ? { ...n, category: targetCategory, updatedAt: new Date().toISOString() }
+        : n
     );
+    setNotes(updatedNotes);
     showToast(`${count} notes assigned to "${targetCategory}"`);
     setSelectedNoteIds([]);
     setIsBatchCategoryModalOpen(false);
+    handleSync(true, updatedNotes);
   };
 
   const handleCreateAndBatchAssign = (newCategoryName: string) => {
@@ -808,7 +815,7 @@ export default function App() {
     }
   };
 
-  const handleSync = async (silent = false) => {
+  const handleSync = async (silent = false, currentNotes?: Note[]) => {
     if (isSyncing) return;
     setIsSyncing(true);
     
@@ -842,6 +849,7 @@ export default function App() {
 
     try {
       const sheetId = FIXED_SHEET_ID;
+      const localNotesToSync = currentNotes || notes;
 
       // 0. Get the sheet metadata to find the first sheet name
       const metaResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`, {
@@ -864,115 +872,132 @@ export default function App() {
       }
 
       const metaData = await metaResponse.json();
-      const firstSheetName = metaData.sheets?.[0]?.properties?.title || 'Sheet1';
+      const firstSheet = metaData.sheets?.[0];
+      const firstSheetName = firstSheet?.properties?.title || 'Sheet1';
+      const firstSheetId = firstSheet?.properties?.sheetId || 0;
 
-      // 1. Fetch current data from the sheet (Source of Truth)
+      // 1. Fetch current data from the sheet (Source of Truth for content)
       const fetchRange = `'${firstSheetName}'!A:E`;
       const getResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fetchRange)}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
 
-      let sheetNotes: Note[] = [];
-      if (getResponse.ok) {
-        const getData = await getResponse.json();
-        const rows = getData.values || [];
-        if (rows.length > 1) { // Skip header
-          // Datetime, Notename, Category, Note, Action
-          sheetNotes = rows.slice(1).map((row: any[], index: number) => {
-            const [datetime, title, category, noteText] = row;
-            // Generate a stable ID based on content/index if not present
-            // In a real app we'd store the ID in the sheet, but sticking to user's CSV format
-            const id = `sheet_note_${index}_${title?.substring(0, 10)}`;
-            return {
-              id,
-              title: title || 'Untitled',
-              content: noteText || '',
-              category: category || 'Uncategorized',
-              createdAt: datetime || new Date().toISOString(),
-              updatedAt: datetime || new Date().toISOString(),
-              isPinned: false,
-              isLocked: false,
-            } as Note;
-          });
-        }
+      if (!getResponse.ok) {
+        throw new Error('Failed to fetch sheet values');
       }
 
-      // 2. Merge logic:
-      // Since the user says "sheet data thakbe seitai apps a show korbe", 
-      // but also "deleting locally should remove from sheet".
-      // We'll combine: Start with sheet notes, add local notes that aren't in sheet (newly created),
-      // and skip notes that are in the local 'deleted' list.
-      
+      const getData = await getResponse.json();
       const deletedIds = getDeletedNoteIds();
-      const localNotesToKeep = notes.filter(n => !deletedIds.has(n.id));
-      
-      // If we're doing a manual sync, we'll favor the sheet but keep local additions
-      // For now, let's just make the sheet the absolute source for EXISTING notes,
-      // and local additions are pushed up.
-      
-      const combinedNotesMap = new Map<string, Note>();
-      
-      // Add sheet notes first (they are source of truth)
-      sheetNotes.forEach(n => {
-        // We match by title and content for merging since IDs aren't in sheet
-        const key = `${n.title}|${n.content.substring(0, 50)}`;
-        combinedNotesMap.set(key, n);
-      });
-      
-      // Add local notes that aren't already represented (newly created)
-      localNotesToKeep.forEach(n => {
-        const key = `${n.title}|${n.content.substring(0, 50)}`;
-        if (!combinedNotesMap.has(key)) {
-          combinedNotesMap.set(key, n);
-        }
-      });
-      
-      const finalNotes = Array.from(combinedNotesMap.values());
+      const rowsToDelete: number[] = [];
+      const sheetRows = getData.values || [];
 
-      // 3. Prepare values for writing back to sheet (Syncing back)
-      const values = finalNotes.map(n => {
-        const d = new Date(n.updatedAt || n.createdAt);
-        const formattedDate = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
-        return [
-          formattedDate,
-          n.title,
-          n.category || 'Uncategorized',
-          n.content,
-          '' // Action
-        ];
-      });
+      // 2. Identify rows to delete and local notes that are new
+      // Skip header, process rows
+      sheetRows.slice(1).forEach((row: any[], index: number) => {
+        const title = row[1] || '';
+        const noteText = row[3] || '';
+        const rowIndex = index + 1; // 1-based index in sheet
 
-      // Add header
-      values.unshift(['Datetime', 'Notename', 'Category', 'Note', 'Action']);
-
-      // 4. Clear and Rewrite (to handle deletions and reordering)
-      const clearRange = `'${firstSheetName}'!A1:E5000`; 
-      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(clearRange)}:clear`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
+        const compositeKey = `del_${title}_${noteText.substring(0, 50)}`;
+        
+        if (deletedIds.has(compositeKey)) {
+          rowsToDelete.push(rowIndex);
         }
       });
 
-      const updateRange = `'${firstSheetName}'!A1:E${values.length}`;
-      const writeResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(updateRange)}?valueInputOption=USER_ENTERED`, {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ values })
+      // Identify local notes that are NOT in the sheet (New Additions)
+      const newLocalNotes = localNotesToSync.filter(n => {
+        if (deletedIds.has(n.id)) return false;
+        // Check if already in sheet by title and content
+        const exists = sheetRows.some((row: any[], idx: number) => idx > 0 && row[1] === n.title && row[3] === n.content);
+        return !exists;
       });
 
-      if (!writeResponse.ok) {
-        const errorData = await writeResponse.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || 'Failed to write back to sheet');
+      // 3. Execute Deletions (Batch Update)
+      if (rowsToDelete.length > 0) {
+        const sortedIndices = [...rowsToDelete].sort((a, b) => b - a);
+        const requests = sortedIndices.map(idx => ({
+          deleteDimension: {
+            range: {
+              sheetId: firstSheetId,
+              dimension: 'ROWS',
+              startIndex: idx,
+              endIndex: idx + 1
+            }
+          }
+        }));
+
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ requests })
+        });
       }
 
-      // Update local state
-      setNotes(finalNotes);
-      const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '');
+      // 4. Execute Additions (Append)
+      if (newLocalNotes.length > 0) {
+        const valuesToAppend = newLocalNotes.map(n => {
+          const d = new Date(n.updatedAt || n.createdAt);
+          const formattedDate = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+          return [formattedDate, n.title, n.category || 'Uncategorized', n.content, ''];
+        });
+
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(firstSheetName)}!A1:append?valueInputOption=USER_ENTERED`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ values: valuesToAppend })
+        });
+      }
+
+      // 5. Final Step: Refresh local state from the sheet, but MERGE to preserve local-only fields
+      const finalGetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fetchRange)}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      if (finalGetResponse.ok) {
+        const finalData = await finalGetResponse.json();
+        const finalRows = finalData.values || [];
+        
+        const sheetNotes: Note[] = finalRows.slice(1).map((row: any[], index: number) => {
+          const [datetime, title, category, noteText] = row;
+          
+          // Try to find matching local note to preserve its properties (id, pinned, locked, color)
+          const matchingLocalNote = localNotesToSync.find(n => n.title === title && n.content === noteText);
+          
+          if (matchingLocalNote) {
+            return {
+              ...matchingLocalNote,
+              category: category || matchingLocalNote.category || 'Uncategorized',
+              updatedAt: datetime || matchingLocalNote.updatedAt || new Date().toISOString(),
+            };
+          }
+
+          return {
+            id: `note_${index}_${Date.now()}`,
+            title: title || 'Untitled',
+            content: noteText || '',
+            category: category || 'Uncategorized',
+            createdAt: datetime || new Date().toISOString(),
+            updatedAt: datetime || new Date().toISOString(),
+            isPinned: false,
+            isLocked: false,
+          };
+        });
+
+        setNotes(sheetNotes);
+      }
+      
+      const now = new Date().toLocaleString('en-GB', { 
+        day: '2-digit', month: 'short', year: '2-digit', 
+        hour: '2-digit', minute: '2-digit' 
+      }).replace(',', '');
+      
       setLastSyncTime(now);
       localStorage.setItem('smart_notepad_last_sync', now);
       if (!silent) showToast('Sync successful!');
@@ -988,9 +1013,8 @@ export default function App() {
     const trimmed = newName.trim();
     if (!trimmed || oldName === trimmed) return;
     setCategories((prev) => prev.map((c) => (c === oldName ? trimmed : c)));
-    setNotes((prev) =>
-      prev.map((n) => (n.category === oldName ? { ...n, category: trimmed } : n))
-    );
+    const updatedNotes = notes.map((n) => (n.category === oldName ? { ...n, category: trimmed } : n));
+    setNotes(updatedNotes);
     setTrashNotes((prev) =>
       prev.map((n) => (n.category === oldName ? { ...n, category: trimmed } : n))
     );
@@ -998,6 +1022,7 @@ export default function App() {
       setActiveCategory(trimmed);
     }
     showToast(`Category renamed to "${trimmed}"`);
+    handleSync(true, updatedNotes);
   };
 
   const handleDeleteCategory = (catToDelete: string) => {
@@ -1013,11 +1038,10 @@ export default function App() {
       onConfirm: () => {
         setCategories((prev) => prev.filter((c) => c !== catToDelete));
         // Reassign affected notes to "Uncategorized" as requested!
-        setNotes((prev) =>
-          prev.map((n) =>
-            n.category === catToDelete ? { ...n, category: 'Uncategorized' } : n
-          )
+        const updatedNotes = notes.map((n) =>
+          n.category === catToDelete ? { ...n, category: 'Uncategorized' } : n
         );
+        setNotes(updatedNotes);
         setTrashNotes((prev) =>
           prev.map((n) =>
             n.category === catToDelete ? { ...n, category: 'Uncategorized' } : n
@@ -1031,6 +1055,7 @@ export default function App() {
             ? `Category "${catToDelete}" removed. Notes moved to General.`
             : `Category "${catToDelete}" removed.`
         );
+        handleSync(true, updatedNotes);
       },
     });
   };
