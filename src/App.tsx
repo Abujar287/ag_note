@@ -315,14 +315,16 @@ export default function App() {
     showToast('Google Apps Script URL সংরক্ষিত হয়েছে');
   };
 
-  const handleSyncToGoogleSheets = async () => {
+  const handleSyncToGoogleSheets = async (silent = false) => {
     if (!sheetsUrl.trim()) {
-      showToast('দয়া করে Settings থেকে Google Apps Script Web App URL দিন', 'error');
-      setIsSettingsModalOpen(true);
+      if (!silent) {
+        showToast('দয়া করে Settings থেকে Google Apps Script Web App URL দিন', 'error');
+        setIsSettingsModalOpen(true);
+      }
       return;
     }
     setIsSyncingSheets(true);
-    showToast('Google Sheet থেকে ডেটা সিঙ্ক হচ্ছে...', 'info');
+    if (!silent) showToast('Google Sheet থেকে ডেটা সিঙ্ক হচ্ছে...', 'info');
     try {
       const res = await fetch(sheetsUrl);
       const text = await res.text();
@@ -330,8 +332,10 @@ export default function App() {
       try {
         data = JSON.parse(text);
       } catch {
-        console.error("Apps Script returned non-JSON text:", text);
-        showToast('Apps Script doGet কোড আপডেট করুন বা সঠিক Web App URL দিন', 'error');
+        if (!silent) {
+          console.error("Apps Script returned non-JSON text:", text);
+          showToast('Apps Script doGet কোড আপডেট করুন বা সঠিক Web App URL দিন', 'error');
+        }
         setIsSyncingSheets(false);
         return;
       }
@@ -356,20 +360,44 @@ export default function App() {
         setLastSyncTime(nowFormatted);
         localStorage.setItem('smart_notepad_last_sync', nowFormatted);
 
-        showToast(`Google Sheet থেকে ${fetchedNotes.length}টি নোট সফলভাবে সিঙ্ক হয়েছে!`);
+        if (!silent) showToast(`Google Sheet থেকে ${fetchedNotes.length}টি নোট সফলভাবে সিঙ্ক হয়েছে!`);
       } else {
         const nowFormatted = formatSyncTimestamp();
         setLastSyncTime(nowFormatted);
         localStorage.setItem('smart_notepad_last_sync', nowFormatted);
-        showToast('শিট থেকে ডেটা ফেচ সম্পন্ন হয়েছে', 'info');
+        if (!silent) showToast('শিট থেকে ডেটা ফেচ সম্পন্ন হয়েছে', 'info');
       }
     } catch (err) {
       console.error(err);
-      showToast('সিঙ্ক করতে সমস্যা হয়েছে (CORS বা URL চেক করুন)', 'error');
+      if (!silent) showToast('সিঙ্ক করতে সমস্যা হয়েছে (CORS বা URL চেক করুন)', 'error');
     } finally {
       setIsSyncingSheets(false);
     }
   };
+
+  // Always Auto-Sync in background (On mount, on window focus, and every 15s)
+  useEffect(() => {
+    if (!sheetsUrl.trim()) return;
+
+    // Initial silent auto-sync
+    handleSyncToGoogleSheets(true);
+
+    // Continuous interval every 15 seconds
+    const interval = setInterval(() => {
+      handleSyncToGoogleSheets(true);
+    }, 15000);
+
+    // Sync on tab focus
+    const onFocus = () => {
+      handleSyncToGoogleSheets(true);
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [sheetsUrl]);
 
   const handleSaveNote = (noteData: any) => {
     const now = new Date().toISOString();
