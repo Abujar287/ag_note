@@ -4,115 +4,59 @@ import {
   Settings,
   Download,
   Upload,
-  Lock,
-  FileText,
-  Pin,
-  Trash2,
-  Folder,
-  ShieldCheck,
-  CheckCircle2,
   Smartphone,
   RefreshCw,
   FileSpreadsheet,
   ExternalLink,
   Copy,
   Check,
+  CheckCircle2,
+  LogOut,
+  LogIn,
+  User as UserIcon,
 } from 'lucide-react';
-import { MASTER_PASSWORD } from '../types/note';
+import { User } from 'firebase/auth';
 import { usePWAInstall } from '../utils/usePWAInstall';
+import {
+  APPS_SCRIPT_SOURCE_CODE,
+  GOOGLE_SHEET_URL,
+} from '../config/syncConfig';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  totalNotes: number;
-  pinnedCount: number;
-  lockedCount: number;
-  trashCount: number;
-  categoryCount: number;
   onExportNotes: () => void;
   onImportNotes: (file: File) => void;
+  currentUser?: User | null;
+  onLogin?: () => void;
+  onLogout?: () => void;
+  // Optional legacy props kept for type safety without cluttering the UI
+  totalNotes?: number;
+  pinnedCount?: number;
+  lockedCount?: number;
+  trashCount?: number;
+  categoryCount?: number;
   onEmptyTrash?: () => void;
-  sheetsUrl: string;
-  onSaveSheetsUrl: (url: string) => void;
-  onSyncSheets: () => void;
-  isSyncingSheets: boolean;
+  sheetsUrl?: string;
+  onSaveSheetsUrl?: (url: string) => void;
+  onSyncSheets?: () => void;
+  isSyncingSheets?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  totalNotes,
-  pinnedCount,
-  lockedCount,
-  trashCount,
-  categoryCount,
   onExportNotes,
   onImportNotes,
-  onEmptyTrash,
-  sheetsUrl,
-  onSaveSheetsUrl,
-  onSyncSheets,
-  isSyncingSheets,
+  currentUser,
+  onLogin,
+  onLogout,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isInstallable, isInstalled, install } = usePWAInstall();
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
-  const [scriptUrlInput, setScriptUrlInput] = useState(sheetsUrl);
   const [copiedCode, setCopiedCode] = useState(false);
-
-  const appsScriptCode = `function doGet(e) {
-  var sheet = SpreadsheetApp.openById("1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI").getActiveSheet();
-  var rows = sheet.getDataRange().getValues();
-  var data = [];
-  var startRow = (rows.length > 0 && rows[0][0] === "Datetime") ? 1 : 0;
-  for (var i = startRow; i < rows.length; i++) {
-    var row = rows[i];
-    if (row[4] !== "DELETE" && row[1]) {
-      data.push({
-        datetime: row[0] || "",
-        notename: row[1] || "Untitled",
-        category: row[2] || "General",
-        note: row[3] || "",
-        action: row[4] || "CREATE"
-      });
-    }
-  }
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  var sheet = SpreadsheetApp.openById("1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI").getActiveSheet();
-  try {
-    var data = JSON.parse(e.postData.contents);
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Datetime", "Notename", "Category", "Note", "Action"]);
-    }
-    var actionType = data.action || "CREATE";
-    if (actionType === "DELETE") {
-      var rows = sheet.getDataRange().getValues();
-      for (var i = rows.length - 1; i >= 1; i--) {
-        if (rows[i][1] === data.notename) {
-          sheet.deleteRow(i + 1);
-        }
-      }
-    } else {
-      sheet.appendRow([
-        data.datetime || new Date().toLocaleString(),
-        data.notename || "Untitled",
-        data.category || "General",
-        data.note || "",
-        actionType
-      ]);
-    }
-    return ContentService.createTextOutput(JSON.stringify({"status": "success"}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}`;
 
   if (!isOpen) return null;
 
@@ -149,9 +93,15 @@ function doPost(e) {
     }
   };
 
+  const handleCopyAppsScript = () => {
+    navigator.clipboard.writeText(APPS_SCRIPT_SOURCE_CODE);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
@@ -166,10 +116,10 @@ function doPost(e) {
             </div>
             <div>
               <h3 className="font-bold text-[#F0F7F4] text-base leading-tight">
-                Notepad Settings
+                Notepad Settings (সেটিংস)
               </h3>
               <p className="text-[11px] text-[#8DA89B]">
-                আপনার ডিভাইস স্টোরেজ ও ব্যাকআপ নিয়ন্ত্রণ করুন
+                অ্যাপ ইনস্টল, অ্যাপ স্ক্রিপ্ট, ব্যাকআপ ও অ্যাকাউন্ট নিয়ন্ত্রণ
               </p>
             </div>
           </div>
@@ -182,76 +132,22 @@ function doPost(e) {
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* Storage & Privacy Note */}
-          <div className="bg-[#12211A] p-3.5 rounded-xl border border-[#2D4A3D] flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-[#10B981] shrink-0 mt-0.5" />
-            <div className="text-xs space-y-1">
-              <p className="font-bold text-[#F0F7F4]">
-                ১০০% লোকাল ও সুরক্ষিত নোটপ্যাড
-              </p>
-              <p className="text-[#8DA89B] leading-relaxed">
-                আপনার সমস্ত নোট আপনার ডিভাইসের ব্রাউজার মেমোরিতে (LocalStorage) সেভ থাকে। কোনো এক্সটারনাল সার্ভার বা শিটের প্রয়োজন নেই।
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Stats Grid */}
-          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-2.5">
-            <h4 className="text-[11px] font-black uppercase tracking-wider text-[#D4AF37]">
-              নোটের পরিসংখ্যান (Summary)
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
-              <div className="bg-[#162920] p-2.5 rounded-lg border border-[#2D4A3D]">
-                <div className="flex items-center justify-center gap-1 text-[11px] text-[#8DA89B] mb-0.5">
-                  <FileText className="w-3 h-3 text-[#D4AF37]" /> Total
-                </div>
-                <span className="text-base font-black text-[#F0F7F4] font-mono">
-                  {totalNotes}
-                </span>
-              </div>
-              <div className="bg-[#162920] p-2.5 rounded-lg border border-[#2D4A3D]">
-                <div className="flex items-center justify-center gap-1 text-[11px] text-[#8DA89B] mb-0.5">
-                  <Pin className="w-3 h-3 text-[#D4AF37]" /> Pinned
-                </div>
-                <span className="text-base font-black text-[#D4AF37] font-mono">
-                  {pinnedCount}
-                </span>
-              </div>
-              <div className="bg-[#162920] p-2.5 rounded-lg border border-[#2D4A3D]">
-                <div className="flex items-center justify-center gap-1 text-[11px] text-[#8DA89B] mb-0.5">
-                  <Lock className="w-3 h-3 text-[#D4AF37]" /> Locked
-                </div>
-                <span className="text-base font-black text-[#D4AF37] font-mono">
-                  {lockedCount}
-                </span>
-              </div>
-              <div className="bg-[#162920] p-2.5 rounded-lg border border-[#2D4A3D]">
-                <div className="flex items-center justify-center gap-1 text-[11px] text-[#8DA89B] mb-0.5">
-                  <Folder className="w-3 h-3 text-[#10B981]" /> Categories
-                </div>
-                <span className="text-base font-black text-[#10B981] font-mono">
-                  {categoryCount}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile PWA & GitHub Auto-Update Card */}
+        {/* Modal Body: ONLY 4 items: Apps install, Apps Script, JSON backup, logout */}
+        <div className="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* 1. Apps install */}
           <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
                 <Smartphone className="w-4 h-4 text-[#D4AF37]" />
-                <span>মোবাইল অ্যাপ ও অটো-আপডেট (GitHub Push)</span>
+                <span>1. Apps Install (অ্যাপ ইনস্টল ও আপডেট)</span>
               </h4>
               <span className="text-[10px] font-mono text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded-full border border-[#10B981]/30">
-                PWA Enabled
+                PWA Ready
               </span>
             </div>
 
             <p className="text-xs text-[#8DA89B] leading-relaxed">
-              GitHub-এ কোড পুশ বা হোস্ট আপডেট করার সাথে সাথে আপনার ফোনে অ্যাপ ওপেন করলেই স্বয়ংক্রিয়ভাবে নতুন আপডেট চলে আসবে। কোনো ক্যাশ ডিলিট করার দরকার নেই এবং আপনার সংরক্ষিত কোনো নোট মুছে যাবে না।
+              আপনার ফোনে বা কম্পিউটারে হোমস্ক্রিন অ্যাপ হিসেবে ইনস্টল করুন। GitHub-এ কোড আপডেট হলে ফোনে স্বয়ংক্রিয়ভাবে আপডেট চলে আসবে এবং কোনো নোট হারাবে না।
             </p>
 
             <div className="flex flex-col sm:flex-row gap-2 pt-1">
@@ -261,11 +157,15 @@ function doPost(e) {
                 disabled={isCheckingUpdate}
                 className="flex-1 py-2 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] hover:border-[#D4AF37]/50 text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#D4AF37] ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-3.5 h-3.5 text-[#D4AF37] ${
+                    isCheckingUpdate ? 'animate-spin' : ''
+                  }`}
+                />
                 <span>{isCheckingUpdate ? 'চেক করা হচ্ছে...' : 'আপডেট চেক করুন'}</span>
               </button>
 
-              {!isInstalled && (
+              {!isInstalled ? (
                 <button
                   type="button"
                   onClick={async () => {
@@ -280,6 +180,11 @@ function doPost(e) {
                   <Smartphone className="w-3.5 h-3.5" />
                   <span>ফোনে অ্যাপ ইনস্টল করুন</span>
                 </button>
+              ) : (
+                <div className="flex-1 py-2 px-3 bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>অ্যাপ ইনস্টল করা আছে</span>
+                </div>
               )}
             </div>
 
@@ -291,97 +196,40 @@ function doPost(e) {
             )}
           </div>
 
-          {/* Google Sheets & Apps Script Integration */}
-          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
+          {/* 2. Google sheet apps script - just one button */}
+          <div className="bg-[#12211A] p-3 rounded-xl border border-[#2D4A3D]">
+            <button
+              type="button"
+              onClick={handleCopyAppsScript}
+              className="w-full py-3 px-4 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] hover:border-[#10B981]/50 text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+            >
+              {copiedCode ? (
+                <Check className="w-4 h-4 text-[#10B981]" />
+              ) : (
                 <FileSpreadsheet className="w-4 h-4 text-[#10B981]" />
-                <span>Google Sheets সিঙ্ক ও Apps Script</span>
-              </h4>
-              <a
-                href="https://docs.google.com/spreadsheets/d/1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI/edit"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] text-[#10B981] hover:underline flex items-center gap-1 font-semibold"
-              >
-                <span>Google Sheet খুলুন</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-
-            <p className="text-xs text-[#8DA89B] leading-relaxed">
-              আপনার সমস্ত নোট Google Sheet-এ (<span className="font-mono text-[#D4AF37]">1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI</span>) Datetime, Notename, Category, Note এবং Action সহ সিঙ্ক করতে নিচের Apps Script কোডটি আপনার গুগল শিটে স্থাপন (Deploy) করুন।
-            </p>
-
-            {/* Apps Script Web App URL input */}
-            <div className="space-y-1.5 pt-1">
-              <label className="block text-[11px] font-bold text-[#D4AF37]">
-                Google Apps Script Web App URL:
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={scriptUrlInput}
-                  onChange={(e) => setScriptUrlInput(e.target.value)}
-                  placeholder="https://script.google.com/macros/s/.../exec"
-                  className="flex-1 px-3 py-2 bg-[#162920] border border-[#2D4A3D] rounded-xl text-xs text-[#F0F7F4] placeholder-[#8DA89B] focus:outline-none focus:border-[#D4AF37]"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSaveSheetsUrl(scriptUrlInput);
-                  }}
-                  className="px-4 py-2 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#14241D] font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs shrink-0"
-                >
-                  সংরক্ষণ
-                </button>
-              </div>
-            </div>
-
-
-
-            {/* Apps Script Code snippet accordion / container */}
-            <div className="space-y-1.5 pt-2 border-t border-[#2D4A3D]">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#F0F7F4]">
-                  Google Apps Script কোড (Apps Script Code):
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(appsScriptCode);
-                    setCopiedCode(true);
-                    setTimeout(() => setCopiedCode(false), 2000);
-                  }}
-                  className="text-[11px] text-[#D4AF37] hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                >
-                  {copiedCode ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedCode ? 'কপি হয়েছে!' : 'কোড কপি করুন'}</span>
-                </button>
-              </div>
-              <pre className="p-3 bg-[#0d1712] border border-[#2D4A3D] rounded-xl text-[10px] font-mono text-[#8DA89B] overflow-x-auto max-h-40 select-all">
-                {appsScriptCode}
-              </pre>
-              <p className="text-[10px] text-[#8DA89B] italic">
-                * শিটে Extensions &gt; Apps Script এ গিয়ে এই কোড দিন, এরপর Deploy &gt; New deployment (Web app, Execute as: Me, Who has access: Anyone) করে প্রাপ্ত Web App URL উপরের বক্সে দিন।
-              </p>
-            </div>
+              )}
+              <span className={copiedCode ? 'text-[#10B981]' : ''}>
+                {copiedCode
+                  ? 'Apps Script কোড কপি হয়েছে!'
+                  : 'Google Sheet Apps Script (কোড কপি করুন)'}
+              </span>
+            </button>
           </div>
 
-          {/* Backup & Restore */}
+          {/* 3. JSON backup */}
           <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
             <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
               <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
-              JSON ব্যাকআপ ও রিস্টোর
+              <span>3. JSON Backup & Restore (ব্যাকআপ ও রিস্টোর)</span>
             </h4>
             <p className="text-xs text-[#8DA89B] leading-relaxed">
-              নোটের নিরাপত্তা নিশ্চিত করতে আপনার ডিভাইসে অফলাইন ফাইল হিসেবে ব্যাকআপ নামিয়ে রাখতে পারেন:
+              আপনার সমস্ত নোট অফলাইনে নিরাপদে সংরক্ষণ করতে JSON ফাইল ডাউনলোড করুন অথবা আগের কোনো ব্যাকআপ ফাইল নির্বাচন করে পুনরায় ফিরিয়ে আনুন:
             </p>
             <div className="flex gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={onExportNotes}
-                className="flex-1 py-2.5 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                className="flex-1 py-2.5 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-xs"
               >
                 <Download className="w-4 h-4 text-[#D4AF37]" />
                 <span>Backup ডাউনলোড</span>
@@ -389,7 +237,7 @@ function doPost(e) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2.5 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                className="flex-1 py-2.5 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-xs"
               >
                 <Upload className="w-4 h-4 text-[#10B981]" />
                 <span>Backup রিস্টোর</span>
@@ -404,43 +252,98 @@ function doPost(e) {
             </div>
           </div>
 
-          {/* Master Password Note */}
-          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-2">
+          {/* 4. Logout / Account */}
+          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
             <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-[#D4AF37]" />
-              লক করা নোটের মাস্টার পাসওয়ার্ড
+              <LogOut className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>4. Logout & Account (লগআউট)</span>
             </h4>
-            <p className="text-xs text-[#8DA89B] leading-relaxed">
-              নোট লক বা আনলক করার ডিফল্ট মাস্টার পাসওয়ার্ড:{' '}
-              <span className="font-mono font-bold text-[#D4AF37] bg-[#162920] px-2 py-0.5 rounded border border-[#2D4A3D]">
-                {MASTER_PASSWORD}
-              </span>
-            </p>
-          </div>
 
-          {/* Trash Bin Quick Management */}
-          {trashCount > 0 && onEmptyTrash && (
-            <div className="bg-[#1F1414] p-4 rounded-xl border border-rose-900/40 flex items-center justify-between gap-3">
-              <div className="text-xs space-y-0.5">
-                <p className="font-bold text-rose-300">
-                  Trash বিনে {trashCount}টি মুছে ফেলা নোট আছে
-                </p>
-                <p className="text-[11px] text-rose-400/80">
-                  স্থায়ীভাবে ট্র্যাশ খালি করতে পারেন
-                </p>
+            {currentUser ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 bg-[#162920] p-3 rounded-xl border border-[#2D4A3D]">
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt={currentUser.displayName || 'User'}
+                      className="w-10 h-10 rounded-full border border-[#D4AF37]/40 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center font-bold text-sm shrink-0">
+                      {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-[#F0F7F4] truncate">
+                      {currentUser.displayName || 'Google User'}
+                    </p>
+                    <p className="text-[11px] text-[#8DA89B] truncate">
+                      {currentUser.email || 'Logged in'}
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded-full border border-[#10B981]/30 shrink-0 font-semibold">
+                    সক্রিয়
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onLogout) onLogout();
+                    onClose();
+                  }}
+                  className="w-full py-2.5 px-4 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>লগআউট করুন (Logout)</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  onEmptyTrash();
-                  onClose();
-                }}
-                className="px-3 py-1.5 bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800 rounded-lg text-xs font-bold transition-colors cursor-pointer shrink-0"
-              >
-                Empty Trash
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 bg-[#162920] p-3 rounded-xl border border-[#2D4A3D]">
+                  <div className="w-9 h-9 rounded-full bg-[#244234] border border-[#2D4A3D] text-[#8DA89B] flex items-center justify-center shrink-0">
+                    <UserIcon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-[#F0F7F4]">
+                      কোনো অ্যাকাউন্ট লগইন করা নেই
+                    </p>
+                    <p className="text-[11px] text-[#8DA89B]">
+                      নোটসমূহ লোকাল স্টোরেজে সুরক্ষিতভাবে সেভ আছে
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {onLogin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onLogin();
+                      }}
+                      className="flex-1 py-2 px-3 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#14241D] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>Google দিয়ে লগইন করুন</span>
+                    </button>
+                  )}
+                  {onLogout && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onLogout();
+                        onClose();
+                      }}
+                      className="py-2 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#8DA89B] hover:text-[#F0F7F4] rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                      <span>লগআউট</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}

@@ -1,51 +1,46 @@
 /**
- * Utility functions for date formatting, text extraction, and character counting
+ * Utility functions for datetime formatting, text extraction, and character counting
  */
 
-export function formatDate(isoString: string, includeTime = false): string {
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * Formats note datetime in standard compact format: DD-Mon-YY hh:mmA
+ * Example: 27-Oct-26 11:35PM
+ */
+export function formatNoteDateTime(dateInput: string | Date | undefined | null): string {
+  if (!dateInput) return '';
   try {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return 'Unknown date';
-
-    const now = new Date();
-    const isToday =
-      d.getDate() === now.getDate() &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear();
-
-    if (isToday) {
-      const timeStr = d.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-      return includeTime ? `Today at ${timeStr}` : timeStr;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) {
+      // If it's a pre-formatted string (like 10/26/2026 12:46:13), try Date.parse
+      const parsed = Date.parse(String(dateInput));
+      if (!isNaN(parsed)) {
+        return formatNoteDateTime(new Date(parsed));
+      }
+      return String(dateInput).trim();
     }
-
-    const options: Intl.DateTimeFormatOptions = {
-      month: 'short',
-      day: 'numeric',
-    };
-
-    if (d.getFullYear() !== now.getFullYear()) {
-      options.year = 'numeric';
-    }
-
-    if (includeTime) {
-      options.hour = 'numeric';
-      options.minute = '2-digit';
-      options.hour12 = true;
-    }
-
-    const formatted = d.toLocaleDateString('en-US', options);
-    // Convert "Oct 26" to "oct-26" if possible
-    if (!includeTime && d.getFullYear() === now.getFullYear()) {
-       return formatted.replace(' ', '-').toLowerCase();
-    }
-    return formatted;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = MONTH_NAMES[d.getMonth()] || 'Jan';
+    const year = String(d.getFullYear()).slice(-2);
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const strHours = String(hours).padStart(2, '0');
+    return `${day}-${month}-${year} ${strHours}:${minutes}${ampm}`;
   } catch {
-    return 'Unknown date';
+    return String(dateInput || '');
   }
+}
+
+/**
+ * Always returns full Datetime (DD-Mon-YY hh:mmA)
+ */
+export function formatDate(isoString: string | undefined | null, _includeTime = true): string {
+  if (!isoString) return '';
+  return formatNoteDateTime(isoString);
 }
 
 /**

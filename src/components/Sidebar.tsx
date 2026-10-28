@@ -36,6 +36,7 @@ interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
   onOpenSettings?: () => void;
+  onDropNoteToCategory?: (noteId: string, category: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -59,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
   onOpenSettings,
+  onDropNoteToCategory,
 }) => {
   const isMenuOpen = isOpen !== undefined ? isOpen : (isMobileOpen ?? true);
   const handleClose = () => {

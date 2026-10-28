@@ -26,7 +26,9 @@ import { Toast, ToastData } from './components/Toast';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { FloatingBatchBar } from './components/FloatingBatchBar';
 import { SettingsModal } from './components/SettingsModal';
-import importedNotesRaw from './data/importedNotes.json';
+import { User } from 'firebase/auth';
+import { auth, initAuth, logout, googleSignIn } from './utils/auth';
+import { FIXED_APPS_SCRIPT_URL, isValidAppsScriptUrl } from './config/syncConfig';
 
 const DEFAULT_CATEGORIES = ['General', 'Personal', 'Work', 'Bajar', 'Accounts', 'Links'];
 
@@ -64,19 +66,33 @@ const removeDeletedNoteIds = (ids: string[]) => {
   }
 };
 
+// Helper to reliably parse datetime of notes across various formats
+export const parseNoteTimestamp = (note: Partial<Note> | null | undefined): number => {
+  if (!note) return 0;
+  const dates = [note.updatedAt, note.createdAt, note.rawDate];
+  for (const d of dates) {
+    if (!d) continue;
+    const t = new Date(d).getTime();
+    if (!isNaN(t)) return t;
+    const parsed = Date.parse(d);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 0;
+};
+
 export default function App() {
-  // Helper to deduplicate notes by ID
+  // Helper to deduplicate notes by ID and keep them ordered by datetime DESC
   const deduplicateNotes = (noteList: Note[]): Note[] => {
     const map = new Map<string, Note>();
     noteList.forEach(n => {
       if (n && n.id) {
         const existing = map.get(n.id);
-        if (!existing || new Date(n.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
+        if (!existing || parseNoteTimestamp(n) > parseNoteTimestamp(existing)) {
           map.set(n.id, n);
         }
       }
     });
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) => parseNoteTimestamp(b) - parseNoteTimestamp(a));
   };
 
   const [notes, setNotes] = useState<Note[]>(() => {
@@ -120,6 +136,11 @@ export default function App() {
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
   const [unlockedNoteIds, setUnlockedNoteIds] = useState<Set<string>>(new Set());
+  const [displayLimit, setDisplayLimit] = useState<number>(60);
+
+  useEffect(() => {
+    setDisplayLimit(60);
+  }, [activeCategory, searchQuery, activeColorFilter]);
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState<boolean>(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -232,11 +253,21 @@ export default function App() {
 
     result.sort((a, b) => {
       if (a.isPinned !== b.isPinned) return b.isPinned ? 1 : -1;
-      if (sortMode === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      if (sortMode === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      if (sortMode === 'updated') return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      // All notes always come in datetime DESC order (newest first)
+      if (activeCategory === 'all' || sortMode === 'newest' || sortMode === 'updated') {
+        const timeA = parseNoteTimestamp(a);
+        const timeB = parseNoteTimestamp(b);
+        if (timeA !== timeB) return timeB - timeA;
+        return (b.id || '').localeCompare(a.id || '');
+      }
+      if (sortMode === 'oldest') {
+        const timeA = parseNoteTimestamp(a);
+        const timeB = parseNoteTimestamp(b);
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.id || '').localeCompare(b.id || '');
+      }
       if (sortMode === 'title') return (a.title || '').localeCompare(b.title || '');
-      return 0;
+      return parseNoteTimestamp(b) - parseNoteTimestamp(a);
     });
     return result;
   }, [notes, activeCategory, searchQuery, sortMode, unlockedNoteIds, activeColorFilter]);
@@ -297,8 +328,47 @@ export default function App() {
     return `${day}-${month}-${year} ${strHours}:${minutes}${ampm}`;
   };
 
-  const [sheetsUrl, setSheetsUrl] = useState<string>(() => {
-    return localStorage.getItem('smart_notepad_sheets_url') || '';
+  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user) => setCurrentUser(user),
+      () => setCurrentUser(null)
+    );
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setCurrentUser(null);
+      showToast('সফলভাবে লগআউট হয়েছে', 'success');
+    } catch {
+      showToast('লগআউট হতে সমস্যা হয়েছে', 'error');
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      showToast('গুগল সাইন-ইন উইন্ডো খোলা হচ্ছে...', 'info');
+      const res = await googleSignIn();
+      if (res?.user) {
+        setCurrentUser(res.user);
+        showToast(`স্বাগতম, ${res.user.displayName || res.user.email}!`);
+      }
+    } catch (error: any) {
+      console.error('Sign-in error:', error);
+      showToast('সাইন-ইন বাতিল বা ব্যর্থ হয়েছে', 'error');
+    }
+  };
+
+  const [sheetsUrl] = useState<string>(() => {
+    try {
+      localStorage.setItem('smart_notepad_sheets_url', FIXED_APPS_SCRIPT_URL);
+    } catch { /* ignore */ }
+    return FIXED_APPS_SCRIPT_URL;
   });
   const [isSyncingSheets, setIsSyncingSheets] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
@@ -309,32 +379,29 @@ export default function App() {
     }
   });
 
-  const handleSaveSheetsUrl = (url: string) => {
-    setSheetsUrl(url);
-    localStorage.setItem('smart_notepad_sheets_url', url);
-    showToast('Google Apps Script URL সংরক্ষিত হয়েছে');
-  };
 
   const handleSyncToGoogleSheets = async (silent = false) => {
-    if (!sheetsUrl.trim()) {
+    const url = sheetsUrl || FIXED_APPS_SCRIPT_URL;
+    if (!isValidAppsScriptUrl(url)) {
       if (!silent) {
-        showToast('দয়া করে Settings থেকে Google Apps Script Web App URL দিন', 'error');
-        setIsSettingsModalOpen(true);
+        showToast('Google Apps Script এখনো Deploy করা হয়নি। Settings থেকে কোড কপি করে গুগল শিটে Deploy করুন।', 'info');
       }
       return;
     }
     setIsSyncingSheets(true);
     if (!silent) showToast('Google Sheet থেকে ডেটা সিঙ্ক হচ্ছে...', 'info');
     try {
-      const res = await fetch(sheetsUrl);
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
       const text = await res.text();
       let data: any;
       try {
         data = JSON.parse(text);
       } catch {
         if (!silent) {
-          console.error("Apps Script returned non-JSON text:", text);
-          showToast('Apps Script doGet কোড আপডেট করুন বা সঠিক Web App URL দিন', 'error');
+          showToast('Apps Script doGet কোড বা Web App URL চেক করুন', 'error');
         }
         setIsSyncingSheets(false);
         return;
@@ -353,6 +420,7 @@ export default function App() {
           isPinned: false,
           isLocked: false
         }));
+        fetchedNotes.sort((a, b) => parseNoteTimestamp(b) - parseNoteTimestamp(a));
         setNotes(fetchedNotes);
         localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(fetchedNotes));
 
@@ -367,25 +435,27 @@ export default function App() {
         localStorage.setItem('smart_notepad_last_sync', nowFormatted);
         if (!silent) showToast('শিট থেকে ডেটা ফেচ সম্পন্ন হয়েছে', 'info');
       }
-    } catch (err) {
-      console.error(err);
-      if (!silent) showToast('সিঙ্ক করতে সমস্যা হয়েছে (CORS বা URL চেক করুন)', 'error');
+    } catch {
+      if (!silent) {
+        showToast('গুগল শিটের সাথে সংযোগ করা যায়নি (Apps Script Deployment বা এক্সেস চেক করুন)', 'error');
+      }
     } finally {
       setIsSyncingSheets(false);
     }
   };
 
-  // Always Auto-Sync in background (On mount, on window focus, and every 15s)
+  // Auto-Sync in background only if a valid Apps Script URL is configured
   useEffect(() => {
-    if (!sheetsUrl.trim()) return;
+    const url = sheetsUrl || FIXED_APPS_SCRIPT_URL;
+    if (!isValidAppsScriptUrl(url)) return;
 
     // Initial silent auto-sync
     handleSyncToGoogleSheets(true);
 
-    // Continuous interval every 15 seconds
+    // Continuous interval every 30 seconds
     const interval = setInterval(() => {
       handleSyncToGoogleSheets(true);
-    }, 15000);
+    }, 30000);
 
     // Sync on tab focus
     const onFocus = () => {
@@ -420,8 +490,8 @@ export default function App() {
     setNotes(updatedNotes);
     showToast(noteData.id ? 'Note updated' : 'New note created');
 
-    // Auto-sync new/updated note to Google Sheet in background if URL is configured
-    if (sheetsUrl.trim()) {
+    // Auto-sync new/updated note to Google Sheet in background if valid URL is configured
+    if (isValidAppsScriptUrl(sheetsUrl)) {
       fetch(sheetsUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -535,7 +605,7 @@ export default function App() {
   const handlePermanentDelete = (note: Note) => {
     setTrashNotes(prev => prev.filter(n => n.id !== note.id));
     showToast('Note permanently deleted');
-    if (sheetsUrl.trim()) {
+    if (isValidAppsScriptUrl(sheetsUrl)) {
       fetch(sheetsUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -552,7 +622,7 @@ export default function App() {
     const notesToDelete = [...trashNotes];
     setTrashNotes([]);
     showToast('Trash emptied');
-    if (sheetsUrl.trim() && notesToDelete.length > 0) {
+    if (isValidAppsScriptUrl(sheetsUrl) && notesToDelete.length > 0) {
       notesToDelete.forEach(note => {
         fetch(sheetsUrl, {
           method: 'POST',
@@ -672,7 +742,7 @@ export default function App() {
               </div>
               
               <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
-                {filteredNotes.map(note => (
+                {filteredNotes.slice(0, displayLimit).map(note => (
                   <NoteCard
                     key={note.id}
                     note={note}
@@ -691,6 +761,18 @@ export default function App() {
                   />
                 ))}
               </div>
+
+              {filteredNotes.length > displayLimit && (
+                <div className="flex justify-center pt-3 pb-6">
+                  <button
+                    type="button"
+                    onClick={() => setDisplayLimit(prev => prev + 60)}
+                    className="px-5 py-2 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#D4AF37] hover:text-[#F0F7F4] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                  >
+                    + আরো নোট লোড করুন ({filteredNotes.length - displayLimit}টি বাকি)
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </main>
@@ -747,21 +829,11 @@ export default function App() {
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        totalNotes={notes.length}
-        pinnedCount={notes.filter(n => n.isPinned).length}
-        lockedCount={lockedNotesCount}
-        trashCount={trashNotes.length}
-        categoryCount={categories.length}
         onExportNotes={handleExportNotes}
         onImportNotes={handleImportNotes}
-        onEmptyTrash={() => {
-          setTrashNotes([]);
-          showToast('Trash emptied');
-        }}
-        sheetsUrl={sheetsUrl}
-        onSaveSheetsUrl={handleSaveSheetsUrl}
-        onSyncSheets={() => handleSyncToGoogleSheets()}
-        isSyncingSheets={isSyncingSheets}
+        currentUser={currentUser}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
       />
 
       <button

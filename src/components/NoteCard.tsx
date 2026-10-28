@@ -105,8 +105,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   if (viewMode === 'list') {
     return (
       <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('text/plain', note.id);
+        }}
         onClick={handleCardClick}
-        className={`group relative flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border transition-all cursor-pointer hover:shadow-xs ${
+        className={`group relative flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border transition-all cursor-pointer hover:shadow-xs active:cursor-grabbing ${
           isLockedActive
             ? 'border-[var(--accent-gold)] bg-[var(--accent-gold)]/10'
             : isSelected
@@ -170,9 +174,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             {note.category || 'General'}
           </span>
 
-          {/* Datetime (oct-26 format) */}
-          <span className="font-mono tabular-nums text-[9px] font-medium text-[var(--text-primary)]/40 shrink-0">
-            {formatDate(note.createdAt)}
+          {/* Datetime (DD-Mon-YY hh:mmA) */}
+          <span className="font-mono tabular-nums text-[9.5px] font-semibold text-[var(--text-primary)]/70 shrink-0">
+            {formatDate(note.updatedAt || note.createdAt || note.rawDate)}
           </span>
 
           {/* Action buttons in exact requested order: pin, copy, edit, remove, lock */}
@@ -253,8 +257,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   // ==================== Grid View: Ultra Compact card ====================
   return (
     <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', note.id);
+      }}
       onClick={handleCardClick}
-      className={`group relative flex flex-col justify-between p-2.5 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+      className={`group relative flex flex-col justify-between p-2.5 rounded-xl border transition-all cursor-pointer hover:shadow-md active:cursor-grabbing ${
         isLockedActive
           ? 'border-[var(--border)] bg-[var(--bg-card)]'
           : isSelected
@@ -286,8 +294,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             <span className="text-[9px] font-black text-[#8DA89B] uppercase tracking-tighter truncate max-w-[40px]">
               {note.category || 'Uncat'}
             </span>
-            <span className="font-mono tabular-nums text-[8px] text-[#8DA89B]/50 shrink-0">
-              {formatDate(note.createdAt)}
+            <span className="font-mono tabular-nums text-[8.5px] text-[#8DA89B]/80 shrink-0">
+              {formatDate(note.updatedAt || note.createdAt || note.rawDate)}
             </span>
           </div>
 
