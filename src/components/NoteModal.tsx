@@ -195,18 +195,8 @@ export const NoteModal: React.FC<NoteModalProps> = ({
   };
 
   const handleCloseRequest = () => {
-    // If it's a NEW note and has content, auto-save it
-    if (!initialNote) {
-      if (title.trim() || content.trim()) {
-        handleSaveAndClose();
-      } else {
-        onClose();
-      }
-    } else {
-      // If it's an EDITING note, we don't auto-save (as requested)
-      // The user must explicitly hit save or it reverts to previous version.
-      onClose();
-    }
+    // Automatically save and close whenever the user tries to exit the modal
+    handleSaveAndClose();
   };
 
   const { words, chars } = countWordsAndChars(content);
@@ -245,7 +235,7 @@ export const NoteModal: React.FC<NoteModalProps> = ({
             <button
               type="button"
               onClick={handleCloseRequest}
-              title={initialNote ? "Discard changes" : "Close"}
+              title="Save and Close"
               className="text-[#8DA89B] hover:text-[#F0F7F4] p-2 rounded-full hover:bg-[#244234] transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />

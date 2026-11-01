@@ -3,6 +3,7 @@
 // https://script.google.com/macros/s/AKfycbw4zhlHo7I5wJYTOP2nq8E3SKzGs9xCwOoGJJH76WgbiIg0veAjleWCnTLqkr-5VNsG/exec
 
 export const FIXED_APPS_SCRIPT_URL =
+  import.meta.env.VITE_APPS_SCRIPT_URL ||
   'https://script.google.com/macros/s/AKfycbw4zhlHo7I5wJYTOP2nq8E3SKzGs9xCwOoGJJH76WgbiIg0veAjleWCnTLqkr-5VNsG/exec';
 
 export const isValidAppsScriptUrl = (url: string | null | undefined): boolean => {
@@ -15,7 +16,7 @@ export const isValidAppsScriptUrl = (url: string | null | undefined): boolean =>
   return !!match && match[1].length >= 25;
 };
 
-export const GOOGLE_SHEET_ID = '1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI';
+export const GOOGLE_SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID || '1J6xput_hnyroayLrDKJn-mGYn0xDLqTEs_gSrLzWJJI';
 export const GOOGLE_SHEET_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit`;
 
 export const APPS_SCRIPT_SOURCE_CODE = `function doGet(e) {
