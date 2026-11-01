@@ -179,6 +179,80 @@ export default function App() {
     onConfirm: () => void;
   }>({ isOpen: false, onConfirm: () => {} });
 
+  const [backPressCount, setBackPressCount] = useState(0);
+
+  // Handle back button for exit confirmation (3 taps required)
+  useEffect(() => {
+    // Initial state to handle the first back button press
+    if (window.history.state?.noBackExits !== true) {
+      window.history.pushState({ noBackExits: true }, '');
+    }
+
+    const handlePopState = () => {
+      const hasOpenModal = 
+        isNoteModalOpen || 
+        !!viewingNote || 
+        isCategoryModalOpen || 
+        isSettingsModalOpen || 
+        passwordModal.isOpen || 
+        deleteModal.isOpen || 
+        isBatchCategoryModalOpen;
+
+      if (hasOpenModal) {
+        setIsNoteModalOpen(false);
+        setViewingNote(null);
+        setIsCategoryModalOpen(false);
+        setIsSettingsModalOpen(false);
+        setPasswordModal({ isOpen: false, note: null });
+        setDeleteModal({ isOpen: false, onConfirm: () => {} });
+        setIsBatchCategoryModalOpen(false);
+        setIsSidebarOpen(false);
+        
+        window.history.pushState({ noBackExits: true }, '');
+        setBackPressCount(0);
+        return;
+      }
+
+      if (isTrashView) {
+        setIsTrashView(false);
+        window.history.pushState({ noBackExits: true }, '');
+        setBackPressCount(0);
+        return;
+      }
+
+      // No modals open, handle exit confirmation
+      setBackPressCount((prev) => {
+        const next = prev + 1;
+        if (next >= 3) {
+          // 3rd press: we don't push state, so it can exit
+          showToast('অ্যাপ থেকে বের হওয়া হচ্ছে...', 'info');
+          return 3;
+        } else {
+          showToast(`বের হতে আরও ${3 - next} বার ব্যাক বাটন চাপুন`, 'info');
+          window.history.pushState({ noBackExits: true }, '');
+          return next;
+        }
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    isNoteModalOpen, viewingNote, isCategoryModalOpen, isSettingsModalOpen, 
+    passwordModal.isOpen, deleteModal.isOpen, isBatchCategoryModalOpen, 
+    isTrashView, isSidebarOpen
+  ]);
+
+  // Reset back press count after 3 seconds
+  useEffect(() => {
+    if (backPressCount > 0 && backPressCount < 3) {
+      const timer = setTimeout(() => {
+        setBackPressCount(0);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [backPressCount]);
+
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', onUndo?: () => void) => {
     setToast({ id: String(Date.now()), message, type, onUndo });
