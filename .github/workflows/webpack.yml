@@ -47,8 +47,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Android SDK (API 35)
+        run: |
+          ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDK_MANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          else
+            SDK_MANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort -V | tail -n 1)
+          fi
+          if [ -z "$SDK_MANAGER" ]; then
+            echo "sdkmanager not found under $ANDROID_HOME"
+            exit 1
+          fi
+          yes | "$SDK_MANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null 2>&1 || true
+          "$SDK_MANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
 
       - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
