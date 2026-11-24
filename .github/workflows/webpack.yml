@@ -29,7 +29,19 @@ jobs:
         with:
           node-version: '22.x'
 
+      - name: Determine release version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            APP_VER="${GITHUB_REF#refs/tags/v}"
+          else
+            APP_VER="1.3.${{ github.run_number }}"
+          fi
+          echo "APP_VER=${APP_VER}" >> $GITHUB_ENV
+          echo "Release version: ${APP_VER} (versionCode=${{ github.run_number }})"
+
       - name: Install web dependencies & build dist
+        env:
+          VITE_APP_VERSION: ${{ env.APP_VER }}
         run: |
           npm install --legacy-peer-deps
           npm run lint
@@ -71,10 +83,9 @@ jobs:
 
       - name: Configure release signing keystore
         run: |
-          rm -f android/app/release.jks
           if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
-          else
+          elif [ ! -f android/app/release.jks ]; then
             keytool -genkeypair -v \
               -keystore android/app/release.jks \
               -alias "${{ secrets.ANDROID_KEY_ALIAS || 'notedpad' }}" \
@@ -83,6 +94,7 @@ jobs:
               -keypass "${{ secrets.ANDROID_KEY_PASSWORD || 'notedpad123' }}" \
               -dname "CN=Notedpad, OU=AG, O=Abujar, L=Dhaka, S=Dhaka, C=BD"
           fi
+          keytool -list -keystore android/app/release.jks -storepass "${{ secrets.ANDROID_STORE_PASSWORD || 'notedpad123' }}"
 
       - name: Build minified Release APK
         working-directory: android
@@ -92,11 +104,6 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'notedpad' }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'notedpad123' }}
         run: |
-          APP_VER=$(node -e "const fs=require('fs');const s=fs.readFileSync('../src/utils/updateManager.ts','utf8');const m=s.match(/CURRENT_APP_VERSION\s*=\s*'([^']+)'/);console.log(m?m[1]:'1.2.0')")
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            APP_VER="${GITHUB_REF#refs/tags/v}"
-          fi
-          echo "APP_VER=${APP_VER}" >> $GITHUB_ENV
           gradle assembleRelease --no-daemon -PVERSION_NAME="${APP_VER}" -PVERSION_CODE="${{ github.run_number }}"
 
       - name: Package APK output

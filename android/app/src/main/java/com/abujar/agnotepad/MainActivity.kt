@@ -3,7 +3,9 @@ package com.abujar.agnotepad
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.DownloadManager
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -33,17 +35,24 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 class MainActivity : Activity() {
 
     private lateinit var webView: WebView
     private val executor = Executors.newSingleThreadExecutor()
+    private val scheduler = Executors.newSingleThreadScheduledExecutor()
+    private var pollFuture: ScheduledFuture<*>? = null
 
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
     private var pendingInstallUri: Uri? = null
-    private var lastDownloadedApkUri: Uri? = null
+    private var lastDownloadedUri: Uri? = null
+    private var lastDownloadedFileName: String? = null
+    private var lastDownloadId: Long = -1L
     private var pendingDownloadUrl: String? = null
     private var pendingDownloadName: String? = null
+    private var pendingExpectedSize: Long = 0L
 
     companion object {
         private const val REQ_FILE_CHOOSER = 1001
@@ -152,6 +161,13 @@ class MainActivity : Activity() {
         webView.loadUrl("$ASSET_ORIGIN/index.html")
     }
 
+    override fun onDestroy() {
+        stopDownloadPolling()
+        executor.shutdownNow()
+        scheduler.shutdownNow()
+        super.onDestroy()
+    }
+
     override fun onResume() {
         super.onResume()
         val pendingUri = pendingInstallUri
@@ -201,10 +217,12 @@ class MainActivity : Activity() {
         if (requestCode == REQ_STORAGE_PERMISSION) {
             val url = pendingDownloadUrl
             val name = pendingDownloadName
+            val expectedSize = pendingExpectedSize
             pendingDownloadUrl = null
             pendingDownloadName = null
+            pendingExpectedSize = 0L
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED && url != null && name != null) {
-                startApkDownload(url, name)
+                startApkDownload(url, name, expectedSize)
             } else {
                 notifyJsError("Storage permission denied")
             }
@@ -248,7 +266,12 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun startApkDownload(apkUrl: String, filename: String) {
+    private fun stopDownloadPolling() {
+        pollFuture?.cancel(false)
+        pollFuture = null
+    }
+
+    private fun startApkDownload(apkUrl: String, filename: String, expectedSize: Long) {
         if (!apkUrl.startsWith("https://")) {
             notifyJsError("Invalid update URL")
             return
@@ -264,6 +287,7 @@ class MainActivity : Activity() {
         ) {
             pendingDownloadUrl = apkUrl
             pendingDownloadName = cleanName
+            pendingExpectedSize = expectedSize
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
@@ -272,6 +296,191 @@ class MainActivity : Activity() {
             return
         }
 
+        stopDownloadPolling()
+        lastDownloadedUri = null
+        lastDownloadedFileName = cleanName
+        lastDownloadId = -1L
+
+        // Resolve any GitHub 302 redirect first so DownloadManager receives the direct CDN APK URL
+        // and fall back automatically to direct MediaStore HTTP download if DownloadManager fails or stalls.
+        executor.execute {
+            var resolvedUrl = apkUrl
+            var resolvedSize = expectedSize
+            try {
+                var currentUrl = apkUrl
+                var redirects = 0
+                while (redirects < 6) {
+                    val urlObj = URL(currentUrl)
+                    val conn = (urlObj.openConnection() as HttpURLConnection).apply {
+                        instanceFollowRedirects = false
+                        connectTimeout = 15000
+                        readTimeout = 15000
+                        requestMethod = "GET"
+                        setRequestProperty("User-Agent", "Notedpad/${BuildConfig.VERSION_NAME}")
+                    }
+                    val code = conn.responseCode
+                    if (code in 300..399) {
+                        val next = conn.getHeaderField("Location")
+                        conn.disconnect()
+                        if (next.isNullOrBlank()) break
+                        currentUrl = URL(urlObj, next).toString()
+                        redirects++
+                    } else {
+                        if (code in 200..299 && conn.contentLengthLong > 0L) {
+                            resolvedSize = conn.contentLengthLong
+                        }
+                        resolvedUrl = currentUrl
+                        conn.disconnect()
+                        break
+                    }
+                }
+            } catch (_: Exception) {
+                resolvedUrl = apkUrl
+            }
+
+            try {
+                val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                val request = DownloadManager.Request(Uri.parse(resolvedUrl)).apply {
+                    setTitle(cleanName)
+                    setDescription("Downloading Notedpad update")
+                    setMimeType("application/vnd.android.package-archive")
+                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    setAllowedOverMetered(true)
+                    setAllowedOverRoaming(true)
+                    setAllowedNetworkTypes(
+                        DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE
+                    )
+                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, cleanName)
+                }
+
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    @Suppress("DEPRECATION")
+                    val existing = File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                        cleanName
+                    )
+                    if (existing.exists()) {
+                        existing.delete()
+                    }
+                }
+
+                val downloadId = dm.enqueue(request)
+                lastDownloadId = downloadId
+                monitorDownloadManager(dm, downloadId, resolvedUrl, cleanName, resolvedSize)
+                return@execute
+            } catch (_: Exception) {
+                // Fall through to direct MediaStore download fallback if DownloadManager is disabled
+            }
+
+            startDirectHttpFallbackDownload(resolvedUrl, cleanName, resolvedSize)
+        }
+    }
+
+    private fun monitorDownloadManager(
+        dm: DownloadManager,
+        downloadId: Long,
+        fallbackUrl: String,
+        fallbackName: String,
+        expectedSize: Long
+    ) {
+        var lastPct = 0
+        val startedAt = System.currentTimeMillis()
+        pollFuture = scheduler.scheduleAtFixedRate({
+            try {
+                val query = DownloadManager.Query().setFilterById(downloadId)
+                dm.query(query).use { cursor ->
+                    if (cursor == null || !cursor.moveToFirst()) {
+                        stopDownloadPolling()
+                        notifyJsError("Download was cancelled")
+                        return@scheduleAtFixedRate
+                    }
+
+                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                    val downloaded = cursor.getLong(
+                        cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                    ).coerceAtLeast(0L)
+                    val totalFromDm = cursor.getLong(
+                        cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                    )
+                    val total = when {
+                        totalFromDm > 0L -> totalFromDm
+                        expectedSize > 0L -> expectedSize.coerceAtLeast(downloaded)
+                        else -> downloaded
+                    }
+
+                    when (status) {
+                        DownloadManager.STATUS_PENDING, DownloadManager.STATUS_PAUSED -> {
+                            if (downloaded == 0L && System.currentTimeMillis() - startedAt > 12000L) {
+                                stopDownloadPolling()
+                                try {
+                                    dm.remove(downloadId)
+                                } catch (_: Exception) {
+                                }
+                                startDirectHttpFallbackDownload(fallbackUrl, fallbackName, expectedSize)
+                                return@scheduleAtFixedRate
+                            }
+                            notifyJsProgress(lastPct.coerceAtLeast(1), downloaded, total)
+                        }
+                        DownloadManager.STATUS_RUNNING -> {
+                            val pct = if (total > 0L) {
+                                ((downloaded * 100L) / total).toInt().coerceIn(1, 99)
+                            } else {
+                                10
+                            }
+                            lastPct = pct.coerceAtLeast(lastPct)
+                            notifyJsProgress(lastPct, downloaded, total)
+                        }
+                        DownloadManager.STATUS_SUCCESSFUL -> {
+                            stopDownloadPolling()
+                            val uriIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                            val localUriStr = if (uriIdx >= 0) cursor.getString(uriIdx) else null
+                            val resolvedName = localUriStr?.let {
+                                Uri.parse(it).lastPathSegment
+                            }?.takeIf { it.isNotBlank() } ?: fallbackName
+
+                            val dmUri = dm.getUriForDownloadedFile(downloadId)
+                            lastDownloadedUri = dmUri
+                            lastDownloadedFileName = resolvedName
+
+                            val finalBytes = total.coerceAtLeast(downloaded)
+                            notifyJsProgress(100, finalBytes, finalBytes)
+                            notifyJsComplete(resolvedName)
+                        }
+                        DownloadManager.STATUS_FAILED -> {
+                            stopDownloadPolling()
+                            try {
+                                dm.remove(downloadId)
+                            } catch (_: Exception) {
+                            }
+                            startDirectHttpFallbackDownload(fallbackUrl, fallbackName, expectedSize)
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                stopDownloadPolling()
+                startDirectHttpFallbackDownload(fallbackUrl, fallbackName, expectedSize)
+            }
+        }, 0L, 250L, TimeUnit.MILLISECONDS)
+    }
+
+    private fun describeDownloadError(reason: Int): String {
+        return when (reason) {
+            DownloadManager.ERROR_CANNOT_RESUME -> "Download could not resume"
+            DownloadManager.ERROR_DEVICE_NOT_FOUND -> "Storage not available"
+            DownloadManager.ERROR_FILE_ALREADY_EXISTS -> "File already exists in Download folder"
+            DownloadManager.ERROR_HTTP_DATA_ERROR -> "Network error while downloading APK"
+            DownloadManager.ERROR_INSUFFICIENT_SPACE -> "Not enough storage space"
+            DownloadManager.ERROR_TOO_MANY_REDIRECTS -> "Too many network redirects"
+            DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> "Server returned an invalid response"
+            else -> "APK download failed (code $reason)"
+        }
+    }
+
+    private fun startDirectHttpFallbackDownload(
+        apkUrl: String,
+        cleanName: String,
+        expectedSize: Long
+    ) {
         executor.execute {
             var connection: HttpURLConnection? = null
             var mediaUri: Uri? = null
@@ -288,15 +497,13 @@ class MainActivity : Activity() {
                         connectTimeout = 20000
                         readTimeout = 30000
                         requestMethod = "GET"
-                        setRequestProperty("User-Agent", "Notedpad-Android/${BuildConfig.VERSION_NAME}")
+                        setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) Notedpad/${BuildConfig.VERSION_NAME}")
                     }
                     val code = connection.responseCode
                     if (code in 300..399) {
                         val next = connection.getHeaderField("Location")
                         connection.disconnect()
-                        if (next.isNullOrBlank()) {
-                            throw IllegalStateException("Empty redirect location")
-                        }
+                        if (next.isNullOrBlank()) throw IllegalStateException("Empty redirect location")
                         currentUrl = URL(urlObj, next).toString()
                         redirects++
                     } else {
@@ -310,7 +517,7 @@ class MainActivity : Activity() {
                     throw IllegalStateException("APK not found (HTTP $status)")
                 }
 
-                val totalBytes = conn.contentLengthLong.takeIf { it > 0L } ?: 0L
+                val totalBytes = conn.contentLengthLong.takeIf { it > 0L } ?: expectedSize
                 val inputStream: InputStream = conn.inputStream
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -320,19 +527,16 @@ class MainActivity : Activity() {
                         put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                         put(MediaStore.Downloads.IS_PENDING, 1)
                     }
-                    val resolver = contentResolver
-                    mediaUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    mediaUri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
                         ?: throw IllegalStateException("Unable to create file in Download folder")
-                    outputStream = resolver.openOutputStream(mediaUri)
+                    outputStream = contentResolver.openOutputStream(mediaUri)
                         ?: throw IllegalStateException("Unable to open Download output stream")
                 } else {
                     @Suppress("DEPRECATION")
                     val downloadsDir = Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_DOWNLOADS
                     )
-                    if (!downloadsDir.exists()) {
-                        downloadsDir.mkdirs()
-                    }
+                    if (!downloadsDir.exists()) downloadsDir.mkdirs()
                     legacyFile = File(downloadsDir, cleanName)
                     outputStream = FileOutputStream(legacyFile)
                 }
@@ -348,14 +552,11 @@ class MainActivity : Activity() {
                     downloaded += read
 
                     val now = System.currentTimeMillis()
-                    if (now - lastUpdate >= 100L) {
+                    if (now - lastUpdate >= 120L) {
                         lastUpdate = now
-                        val pct = if (totalBytes > 0) {
-                            ((downloaded * 100L) / totalBytes).toInt().coerceIn(1, 99)
-                        } else {
-                            50
-                        }
-                        notifyJsProgress(pct, downloaded, totalBytes.coerceAtLeast(downloaded))
+                        val total = totalBytes.coerceAtLeast(downloaded)
+                        val pct = if (total > 0L) ((downloaded * 100L) / total).toInt().coerceIn(1, 99) else 50
+                        notifyJsProgress(pct, downloaded, total)
                     }
                 }
 
@@ -372,22 +573,16 @@ class MainActivity : Activity() {
                     contentResolver.update(mediaUri, doneValues, null, null)
                     mediaUri
                 } else if (legacyFile != null) {
-                    FileProvider.getUriForFile(
-                        this@MainActivity,
-                        "$packageName.fileprovider",
-                        legacyFile
-                    )
+                    FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", legacyFile)
                 } else {
                     throw IllegalStateException("Saved APK URI unavailable")
                 }
 
-                lastDownloadedApkUri = finalUri
-                notifyJsProgress(100, downloaded, totalBytes.coerceAtLeast(downloaded))
+                lastDownloadedUri = finalUri
+                lastDownloadedFileName = cleanName
+                val finalTotal = totalBytes.coerceAtLeast(downloaded)
+                notifyJsProgress(100, finalTotal, finalTotal)
                 notifyJsComplete(cleanName)
-
-                runOnUiThread {
-                    launchApkInstaller(finalUri)
-                }
             } catch (e: Exception) {
                 try {
                     outputStream?.close()
@@ -405,6 +600,67 @@ class MainActivity : Activity() {
                 notifyJsError(e.message ?: "APK download failed")
             }
         }
+    }
+
+    /**
+     * Stages the downloaded APK from DownloadManager/Download folder into our FileProvider-backed
+     * cache directory so PackageInstaller never fails with content://downloads permission or
+     * package parsing errors across Android 7-15 OEM launchers.
+     */
+    private fun resolveInstallableFileProviderUri(filenameHint: String): Uri? {
+        val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val sourceUri: Uri? = lastDownloadedUri ?: if (lastDownloadId >= 0L) {
+            dm.getUriForDownloadedFile(lastDownloadId)
+        } else {
+            null
+        }
+
+        val updatesDir = File(cacheDir, "updates").apply {
+            if (exists()) {
+                listFiles()?.forEach { it.delete() }
+            } else {
+                mkdirs()
+            }
+        }
+
+        val cleanName = sanitizeFilename(lastDownloadedFileName ?: filenameHint, ".apk")
+        val stagedApk = File(updatesDir, cleanName)
+
+        if (sourceUri != null) {
+            try {
+                contentResolver.openInputStream(sourceUri)?.use { input ->
+                    FileOutputStream(stagedApk).use { output ->
+                        input.copyTo(output, 32768)
+                    }
+                }
+                if (stagedApk.exists() && stagedApk.length() > 102400L) {
+                    return FileProvider.getUriForFile(this, "$packageName.fileprovider", stagedApk)
+                }
+            } catch (_: Exception) {
+                stagedApk.delete()
+            }
+        }
+
+        // Secondary lookup directly in public Download directory (pre-Q or shared path)
+        @Suppress("DEPRECATION")
+        val publicFile = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            cleanName
+        )
+        if (publicFile.exists() && publicFile.length() > 102400L) {
+            return try {
+                publicFile.inputStream().use { input ->
+                    FileOutputStream(stagedApk).use { output ->
+                        input.copyTo(output, 32768)
+                    }
+                }
+                FileProvider.getUriForFile(this, "$packageName.fileprovider", stagedApk)
+            } catch (_: Exception) {
+                sourceUri
+            }
+        }
+
+        return sourceUri
     }
 
     private fun launchApkInstaller(uri: Uri) {
@@ -440,34 +696,24 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun downloadApk(apkUrl: String, filename: String) {
-            startApkDownload(apkUrl, filename)
+            startApkDownload(apkUrl, filename, 0L)
+        }
+
+        @JavascriptInterface
+        fun downloadApkWithSize(apkUrl: String, filename: String, expectedSize: Long) {
+            startApkDownload(apkUrl, filename, expectedSize)
         }
 
         @JavascriptInterface
         fun installApk(filename: String) {
-            val uri = lastDownloadedApkUri
-            if (uri != null) {
-                runOnUiThread { launchApkInstaller(uri) }
-                return
-            }
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                val cleanName = sanitizeFilename(filename, ".apk")
-                @Suppress("DEPRECATION")
-                val file = File(
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                    cleanName
-                )
-                if (file.exists()) {
-                    val fileUri = FileProvider.getUriForFile(
-                        this@MainActivity,
-                        "$packageName.fileprovider",
-                        file
-                    )
-                    runOnUiThread { launchApkInstaller(fileUri) }
-                    return
+            executor.execute {
+                val installUri = resolveInstallableFileProviderUri(filename)
+                if (installUri != null) {
+                    runOnUiThread { launchApkInstaller(installUri) }
+                } else {
+                    notifyJsError("Downloaded APK file not found in Download folder")
                 }
             }
-            notifyJsError("Downloaded APK file not found")
         }
 
         @JavascriptInterface

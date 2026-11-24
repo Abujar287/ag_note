@@ -5,8 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val appVersionCode = (project.findProperty("VERSION_CODE") as String?)?.toIntOrNull() ?: 2
-val appVersionName = (project.findProperty("VERSION_NAME") as String?) ?: "1.2.0"
+val appVersionCode = (project.findProperty("VERSION_CODE") as String?)?.toIntOrNull() ?: 3
+val appVersionName = (project.findProperty("VERSION_NAME") as String?) ?: "1.2.1"
 
 android {
     namespace = "com.abujar.agnotepad"

@@ -25,6 +25,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const [downloadedBytes, setDownloadedBytes] = useState(0);
   const [totalBytesState, setTotalBytesState] = useState(apkSize || 0);
   const [isComplete, setIsComplete] = useState(false);
+  const [downloadedFileName, setDownloadedFileName] = useState<string | null>(null);
   const [downloadedBlobUrl, setDownloadedBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
       setDownloadProgress(0);
       setDownloadedBytes(0);
       setIsComplete(false);
+      setDownloadedFileName(null);
       if (downloadedBlobUrl) {
         URL.revokeObjectURL(downloadedBlobUrl);
         setDownloadedBlobUrl(null);
@@ -52,7 +54,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const totalBytes = totalBytesState || apkSize || 0;
   const totalMB = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '--';
   const downloadedMB = (downloadedBytes / (1024 * 1024)).toFixed(1);
-  const filename = `Notedpad_v${newVersion}.apk`;
+  const filename = downloadedFileName || `Notedpad_v${newVersion}.apk`;
 
   const handleStartDownload = async () => {
     if (!apkUrl) {
@@ -65,18 +67,23 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     setDownloadedBytes(0);
     setIsComplete(false);
 
-    // Native Android wrapper bridge (direct MediaStore.Downloads + FileProvider installer)
-    if ((window as any).Android && typeof (window as any).Android.downloadApk === 'function') {
+    const androidBridge = (window as any).Android;
+    if (
+      androidBridge &&
+      (typeof androidBridge.downloadApkWithSize === 'function' ||
+        typeof androidBridge.downloadApk === 'function')
+    ) {
       (window as any).__onApkProgress = (pct: number, received: number, total: number) => {
         setDownloadProgress(pct);
         setDownloadedBytes(received);
         if (total > 0) setTotalBytesState(total);
       };
       (window as any).__onApkComplete = (savedName: string) => {
+        if (savedName) setDownloadedFileName(savedName);
         setDownloadProgress(100);
         if (totalBytes > 0) setDownloadedBytes(totalBytes);
         setIsComplete(true);
-        onShowToast(`Saved to Download/${savedName}`, 'success');
+        onShowToast(`Saved to Download/${savedName || filename}`, 'success');
       };
       (window as any).__onApkError = (errMsg: string) => {
         setIsDownloading(false);
@@ -84,11 +91,15 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         onShowToast(errMsg || 'APK download failed.', 'error');
       };
 
-      (window as any).Android.downloadApk(apkUrl, filename);
+      if (typeof androidBridge.downloadApkWithSize === 'function') {
+        androidBridge.downloadApkWithSize(apkUrl, filename, totalBytes);
+      } else {
+        androidBridge.downloadApk(apkUrl, filename);
+      }
       return;
     }
 
-    // Web / PWA fallback: stream real APK or hand off direct download to browser
+    // Web / PWA fallback
     try {
       const response = await fetch(apkUrl, { mode: 'cors' });
       if (!response.ok || !response.body) {
@@ -126,10 +137,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
       const blobUrl = URL.createObjectURL(blob);
       setDownloadedBlobUrl(blobUrl);
 
-      triggerApkInstall(blobUrl, filename);
       onShowToast(`APK downloaded: ${filename}`, 'success');
     } catch {
-      // If GitHub release redirect blocks fetch CORS in browser, trigger direct browser download
       triggerApkInstall(apkUrl, filename);
       setDownloadProgress(100);
       setIsComplete(true);
@@ -137,7 +146,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     }
   };
 
-  const handleOpenInstaller = () => {
+  const handleInstallUpdate = () => {
     if (downloadedBlobUrl) {
       triggerApkInstall(downloadedBlobUrl, filename);
     } else {
@@ -186,10 +195,15 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 {downloadedMB} MB / {totalMB} MB
               </span>
             </div>
+            {isComplete && (
+              <p className="text-xs font-semibold text-emerald-500 text-center pt-1">
+                Download complete. Tap Update to install.
+              </p>
+            )}
           </div>
         )}
 
-        {/* Action Buttons: Cancel and Download (or Close / Open once completed) */}
+        {/* Action Buttons: Cancel & Download before download, Cancel & Update once downloaded */}
         {!isDownloading ? (
           <div className="flex items-center gap-2.5 pt-2">
             <button
@@ -214,14 +228,14 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
               onClick={onClose}
               className="flex-1 py-2.5 px-4 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
-              Close
+              Cancel
             </button>
             <button
               type="button"
-              onClick={handleOpenInstaller}
-              className="flex-1 py-2.5 px-4 bg-[#10B981] text-[#14241D] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
+              onClick={handleInstallUpdate}
+              className="flex-1 py-2.5 px-4 bg-[var(--accent-gold)] text-[var(--accent-contrast)] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
             >
-              Open
+              Update
             </button>
           </div>
         ) : null}
