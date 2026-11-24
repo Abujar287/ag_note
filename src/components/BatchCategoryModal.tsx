@@ -43,28 +43,28 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-[#162920] rounded-2xl shadow-2xl border border-[#2D4A3D] overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
+        className="w-full max-w-md bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border)] overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2D4A3D] bg-[#14241D] shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
           <div>
-            <h2 className="text-base font-bold text-[#F0F7F4] flex items-center gap-2">
-              <Folder className="w-5 h-5 text-[#D4AF37]" />
+            <h2 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+              <Folder className="w-5 h-5 text-[var(--accent-gold)]" />
               <span>Assign Category (ক্যাটাগরি নির্ধারণ)</span>
             </h2>
-            <p className="text-xs text-[#8DA89B] mt-0.5">
-              Move <span className="font-bold text-[#D4AF37]">{selectedCount}</span> selected {selectedCount === 1 ? 'note' : 'notes'} to category
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              Move <span className="font-bold text-[var(--accent-gold)]">{selectedCount}</span> selected {selectedCount === 1 ? 'note' : 'notes'} to category
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--border)]/40 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -72,7 +72,7 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
 
         {/* Categories List */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-2 flex-1">
-          <div className="text-[10px] font-black text-[#8DA89B] uppercase tracking-wider mb-2">
+          <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider mb-2">
             Choose Destination Category
           </div>
 
@@ -84,15 +84,15 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
                   key={cat}
                   type="button"
                   onClick={() => onAssignCategory(cat)}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-[#2D4A3D] hover:border-[#D4AF37] bg-[#14241D]/60 hover:bg-[#244234] text-left transition-all group cursor-pointer"
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-[var(--border)] hover:border-[var(--accent-gold)] bg-[var(--bg-elevated)] text-left transition-all group cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Folder className="w-4 h-4 text-[#D4AF37] group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-semibold text-[#F0F7F4] group-hover:text-[#D4AF37]">
+                    <Folder className="w-4 h-4 text-[var(--accent-gold)] group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-gold)]">
                       {cat}
                     </span>
                   </div>
-                  <span className="text-xs text-[#8DA89B] font-mono px-2 py-0.5 rounded-md bg-[#162920] border border-[#2D4A3D] group-hover:border-[#D4AF37]/50 group-hover:text-[#D4AF37]">
+                  <span className="text-xs text-[var(--text-muted)] font-mono px-2 py-0.5 rounded-md bg-[var(--bg-card)] border border-[var(--border)] group-hover:border-[var(--accent-gold)]/50 group-hover:text-[var(--accent-gold)]">
                     {count}
                   </span>
                 </button>
@@ -110,12 +110,12 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
                   onChange={(e) => setNewCatName(e.target.value)}
                   placeholder="New category name..."
                   autoFocus
-                  className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-xl border border-[#D4AF37] bg-[#14241D] text-[#F0F7F4] placeholder-[#8DA89B] focus:outline-none"
+                  className="flex-1 px-3 py-2 text-xs sm:text-sm rounded-xl border border-[var(--accent-gold)] bg-[var(--bg-elevated)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!newCatName.trim()}
-                  className="px-3 py-2 text-xs font-bold rounded-xl bg-[#D4AF37] text-[#14241D] hover:bg-[#D4AF37]/90 disabled:opacity-50 transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-3 py-2 text-xs font-bold rounded-xl bg-[var(--accent-gold)] text-[#14241D] hover:opacity-90 disabled:opacity-50 transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Assign</span>
@@ -123,7 +123,7 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowNewInput(false)}
-                  className="px-2.5 py-2 text-xs text-[#8DA89B] hover:bg-[#244234] rounded-xl transition-colors cursor-pointer"
+                  className="px-2.5 py-2 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -133,7 +133,7 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
             <button
               type="button"
               onClick={() => setShowNewInput(true)}
-              className="w-full mt-2 py-2.5 px-3 border border-dashed border-[#2D4A3D] hover:border-[#D4AF37] rounded-xl text-xs font-bold text-[#8DA89B] hover:text-[#D4AF37] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full mt-2 py-2.5 px-3 border border-dashed border-[var(--border)] hover:border-[var(--accent-gold)] rounded-xl text-xs font-bold text-[var(--text-muted)] hover:text-[var(--accent-gold)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <FolderPlus className="w-4 h-4" />
               <span>+ Create New Category & Assign</span>
@@ -142,11 +142,11 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 bg-[#14241D] border-t border-[#2D4A3D] flex justify-end shrink-0">
+        <div className="px-5 py-3 bg-[var(--bg-elevated)] border-t border-[var(--border)] flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-bold text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-xl transition-colors cursor-pointer"
+            className="px-4 py-1.5 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--border)]/40 rounded-xl transition-colors cursor-pointer"
           >
             Cancel
           </button>

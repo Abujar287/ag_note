@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus,
   Search,
@@ -6,9 +6,11 @@ import {
   Calendar,
   ArrowUpDown,
   Folder,
+  Palette,
+  Check,
   X,
 } from 'lucide-react';
-import { Note, NoteColor, SortMode, ViewMode, MASTER_PASSWORD } from './types/note';
+import { Note, NoteColor, SortMode, ViewMode } from './types/note';
 import { Navbar } from './components/Navbar';
 import { NoteCard } from './components/NoteCard';
 import { NoteModal } from './components/NoteModal';
@@ -16,20 +18,24 @@ import { ViewNoteModal } from './components/ViewNoteModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { CategoryModal } from './components/CategoryModal';
 import { BatchCategoryModal } from './components/BatchCategoryModal';
-import { PasswordModal } from './components/PasswordModal';
 import { TrashView } from './components/TrashView';
 import { Toast, ToastData } from './components/Toast';
-import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { FloatingBatchBar } from './components/FloatingBatchBar';
 import { SettingsModal } from './components/SettingsModal';
+import { StatsModal } from './components/StatsModal';
 import { UpdateModal } from './components/UpdateModal';
 import { checkForGitHubUpdate, CURRENT_APP_VERSION } from './utils/updateManager';
-import { User } from 'firebase/auth';
-import { auth, initAuth, logout, googleSignIn } from './utils/auth';
 import { FIXED_APPS_SCRIPT_URL, isValidAppsScriptUrl } from './config/syncConfig';
-import initialNotesData from './data/importedNotes.json';
 
-const DEFAULT_CATEGORIES = ['General', 'Personal', 'Work', 'Bajar', 'Accounts', 'Links'];
+const COLOR_SWATCHES: { id: NoteColor; hex: string }[] = [
+  { id: 'blue', hex: '#3B82F6' },
+  { id: 'emerald', hex: '#10B981' },
+  { id: 'amber', hex: '#F59E0B' },
+  { id: 'rose', hex: '#F43F5E' },
+  { id: 'purple', hex: '#A855F7' },
+  { id: 'cyan', hex: '#06B6D4' },
+  { id: 'slate', hex: '#64748B' },
+];
 
 // Permanent record of deleted note IDs so deleted notes never resurface
 const getDeletedNoteIds = (): Set<string> => {
@@ -102,9 +108,7 @@ export default function App() {
         if (Array.isArray(parsed)) return deduplicateNotes(parsed);
       }
     } catch { /* ignore */ }
-    const deletedIds = getDeletedNoteIds();
-    const initial = (initialNotesData as Note[]).filter((n) => n && n.id && !deletedIds.has(n.id));
-    return deduplicateNotes(initial);
+    return [];
   });
 
   const [trashNotes, setTrashNotes] = useState<Note[]>(() => {
@@ -123,10 +127,10 @@ export default function App() {
       const saved = localStorage.getItem('smart_notepad_categories');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch { /* ignore */ }
-    return DEFAULT_CATEGORIES;
+    return [];
   });
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -135,28 +139,39 @@ export default function App() {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7days' | '30days' | 'this_month' | 'custom'>('all');
   const [customDate, setCustomDate] = useState<string>('');
   const [isOtherFiltersOpen, setIsOtherFiltersOpen] = useState<boolean>(false);
+  const [isColorPopoverOpen, setIsColorPopoverOpen] = useState<boolean>(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState<boolean>(false);
+  const colorPopoverRef = useRef<HTMLDivElement>(null);
+  const categoryPopoverRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem('smart_notepad_view') as ViewMode) || 'grid');
   const [isTrashView, setIsTrashView] = useState<boolean>(false);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const [activeColorFilter, setActiveColorFilter] = useState<string | null>(null);
-  const [unlockedNoteIds, setUnlockedNoteIds] = useState<Set<string>>(new Set());
   const [displayLimit, setDisplayLimit] = useState<number>(60);
 
   useEffect(() => {
     setDisplayLimit(60);
   }, [activeCategory, searchQuery, activeColorFilter, dateFilter, customDate, sortMode]);
 
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (colorPopoverRef.current && !colorPopoverRef.current.contains(e.target as Node)) {
+        setIsColorPopoverOpen(false);
+      }
+      if (categoryPopoverRef.current && !categoryPopoverRef.current.contains(e.target as Node)) {
+        setIsCategoryPopoverOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
   const [isNoteModalOpen, setIsNoteModalOpen] = useState<boolean>(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
   const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState<boolean>(false);
-
-  const [passwordModal, setPasswordModal] = useState<{
-    isOpen: boolean;
-    note: Note | null;
-    targetAction?: 'view' | 'edit';
-  }>({ isOpen: false, note: null, targetAction: 'view' });
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [updateModal, setUpdateModal] = useState<{
@@ -196,7 +211,7 @@ export default function App() {
         !!viewingNote || 
         isCategoryModalOpen || 
         isSettingsModalOpen || 
-        passwordModal.isOpen || 
+        isStatsModalOpen || 
         deleteModal.isOpen || 
         isBatchCategoryModalOpen ||
         updateModal.isOpen;
@@ -206,7 +221,7 @@ export default function App() {
         setViewingNote(null);
         setIsCategoryModalOpen(false);
         setIsSettingsModalOpen(false);
-        setPasswordModal({ isOpen: false, note: null });
+        setIsStatsModalOpen(false);
         setDeleteModal({ isOpen: false, onConfirm: () => {} });
         setIsBatchCategoryModalOpen(false);
         setUpdateModal(prev => ({ ...prev, isOpen: false }));
@@ -242,7 +257,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [
     isNoteModalOpen, viewingNote, isCategoryModalOpen, isSettingsModalOpen, 
-    passwordModal.isOpen, deleteModal.isOpen, isBatchCategoryModalOpen, 
+    isStatsModalOpen, deleteModal.isOpen, isBatchCategoryModalOpen, 
     isTrashView, updateModal.isOpen
   ]);
 
@@ -266,8 +281,8 @@ export default function App() {
       const saved = localStorage.getItem('notepad_theme');
       if (saved === 'dark') return true;
       if (saved === 'light') return false;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } catch { return false; }
+      return true;
+    } catch { return true; }
   });
 
   useEffect(() => {
@@ -308,7 +323,6 @@ export default function App() {
   }, [categories, notes]);
 
   const uncategorizedCount = useMemo(() => notes.filter(n => !n.category || n.category.trim() === '' || n.category.toLowerCase() === 'uncategorized').length, [notes]);
-  const lockedNotesCount = useMemo(() => notes.filter((n) => n.isLocked).length, [notes]);
 
   const filteredNotes = useMemo(() => {
     const now = new Date();
@@ -420,82 +434,34 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  const formatSyncTimestamp = (date = new Date()): string => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = monthNames[date.getMonth()];
-    const year = date.getFullYear();
-    let hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const strHours = String(hours).padStart(2, '0');
-    return `${day}-${month}-${year} ${strHours}:${minutes}${ampm}`;
-  };
-
-  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
-
-  useEffect(() => {
-    const unsubscribe = initAuth(
-      (user) => setCurrentUser(user),
-      () => setCurrentUser(null)
-    );
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
-
-  const handleLogout = async () => {
+  const [sheetsUrl, setSheetsUrl] = useState<string>(() => {
     try {
-      await logout();
-      setCurrentUser(null);
-      showToast('সফলভাবে লগআউট হয়েছে', 'success');
+      return localStorage.getItem('smart_notepad_sheets_url') || FIXED_APPS_SCRIPT_URL;
     } catch {
-      showToast('লগআউট হতে সমস্যা হয়েছে', 'error');
+      return FIXED_APPS_SCRIPT_URL;
     }
-  };
-
-  const handleLogin = async () => {
-    try {
-      showToast('গুগল সাইন-ইন উইন্ডো খোলা হচ্ছে...', 'info');
-      const res = await googleSignIn();
-      if (res?.user) {
-        setCurrentUser(res.user);
-        showToast(`স্বাগতম, ${res.user.displayName || res.user.email}!`);
-      }
-    } catch (error: any) {
-      console.error('Sign-in error:', error);
-      showToast('সাইন-ইন বাতিল বা ব্যর্থ হয়েছে', 'error');
-    }
-  };
-
-  const [sheetsUrl] = useState<string>(() => {
-    try {
-      localStorage.setItem('smart_notepad_sheets_url', FIXED_APPS_SCRIPT_URL);
-    } catch { /* ignore */ }
-    return FIXED_APPS_SCRIPT_URL;
   });
   const [isSyncingSheets, setIsSyncingSheets] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
-    try {
-      return localStorage.getItem('smart_notepad_last_sync') || formatSyncTimestamp();
-    } catch {
-      return formatSyncTimestamp();
-    }
-  });
 
+  const handleSaveSheetsUrl = (url: string) => {
+    const clean = url.trim();
+    setSheetsUrl(clean);
+    try {
+      localStorage.setItem('smart_notepad_sheets_url', clean);
+    } catch { /* ignore */ }
+    showToast('Google Sheet URL saved');
+  };
 
   const handleSyncToGoogleSheets = async (silent = false) => {
     const url = sheetsUrl || FIXED_APPS_SCRIPT_URL;
     if (!isValidAppsScriptUrl(url)) {
       if (!silent) {
-        showToast('Google Apps Script এখনো Deploy করা হয়নি। Settings থেকে কোড কপি করে গুগল শিটে Deploy করুন।', 'info');
+        showToast('Google Apps Script URL is not configured yet. Open Settings to configure.', 'info');
       }
       return;
     }
     setIsSyncingSheets(true);
-    if (!silent) showToast('Google Sheet থেকে ডেটা সিঙ্ক হচ্ছে...', 'info');
+    if (!silent) showToast('Syncing with Google Sheet...', 'info');
     try {
       const res = await fetch(url);
       if (!res.ok) {
@@ -507,7 +473,7 @@ export default function App() {
         data = JSON.parse(text);
       } catch {
         if (!silent) {
-          showToast('Apps Script doGet কোড বা Web App URL চেক করুন', 'error');
+          showToast('Check Apps Script doGet code or Web App URL', 'error');
         }
         setIsSyncingSheets(false);
         return;
@@ -515,31 +481,39 @@ export default function App() {
 
       if (Array.isArray(data)) {
         const colors: NoteColor[] = ['blue', 'emerald', 'amber', 'rose', 'purple', 'cyan', 'slate'];
-        const fetchedNotes: Note[] = data.map((item: any, idx: number) => ({
-          id: item.id || `sheet_note_${idx}_${Date.now()}`,
-          title: String(item.title || item.notename || 'Untitled'),
-          category: String(item.category || 'General'),
-          content: String(item.content !== undefined && item.content !== null ? item.content : (item.note !== undefined && item.note !== null ? item.note : '')),
-          color: colors[idx % colors.length],
-          createdAt: item.createdAt || new Date().toISOString(),
-          updatedAt: item.datetime || new Date().toISOString(),
-          isPinned: false,
-          isLocked: false
-        }));
+        const deletedIds = getDeletedNoteIds();
+        const fetchedNotes: Note[] = data
+          .map((item: any, idx: number) => ({
+            id: item.id || `sheet_note_${idx}_${String(item.notename || item.title || '').slice(0, 12)}`,
+            title: String(item.title || item.notename || 'Untitled'),
+            category: String(item.category || ''),
+            content: String(item.content !== undefined && item.content !== null ? item.content : (item.note !== undefined && item.note !== null ? item.note : '')),
+            color: colors[idx % colors.length],
+            createdAt: item.createdAt || new Date().toISOString(),
+            updatedAt: item.datetime || new Date().toISOString(),
+            isPinned: false,
+            isLocked: false
+          }))
+          .filter((n) => !deletedIds.has(n.id));
         fetchedNotes.sort((a, b) => parseNoteTimestamp(b) - parseNoteTimestamp(a));
         setNotes(fetchedNotes);
         localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(fetchedNotes));
 
-        const nowFormatted = formatSyncTimestamp();
-        setLastSyncTime(nowFormatted);
-        localStorage.setItem('smart_notepad_last_sync', nowFormatted);
+        // Merge categories from synced notes
+        const sheetCats = Array.from(
+          new Set(
+            fetchedNotes
+              .map((n) => (n.category || '').trim())
+              .filter((c) => c && c.toLowerCase() !== 'uncategorized')
+          )
+        );
+        if (sheetCats.length > 0) {
+          setCategories((prev) => Array.from(new Set([...prev, ...sheetCats])));
+        }
 
-        if (!silent) showToast(`Google Sheet থেকে ${fetchedNotes.length}টি নোট সফলভাবে সিঙ্ক হয়েছে!`);
+        if (!silent) showToast(`Synced ${fetchedNotes.length} notes from Google Sheet`);
       } else {
-        const nowFormatted = formatSyncTimestamp();
-        setLastSyncTime(nowFormatted);
-        localStorage.setItem('smart_notepad_last_sync', nowFormatted);
-        if (!silent) showToast('শিট থেকে ডেটা ফেচ সম্পন্ন হয়েছে', 'info');
+        if (!silent) showToast('Sheet sync completed', 'info');
       }
     } catch {
       if (!silent) {
@@ -613,56 +587,7 @@ export default function App() {
     }
   };
 
-  const handleTogglePin = (id: string) => {
-    setNotes((prev) => {
-      const next = prev.map((n) => n.id === id ? { ...n, isPinned: !n.isPinned, updatedAt: new Date().toISOString() } : n);
-      return next;
-    });
-  };
-
-  const handleUnlockRequest = (note: Note, action: 'view' | 'edit' = 'view') => {
-    if (unlockedNoteIds.has(note.id)) {
-      if (action === 'view') setViewingNote(note);
-      else { setEditingNote(note); setIsNoteModalOpen(true); }
-      return;
-    }
-    setPasswordModal({ isOpen: true, note, targetAction: action });
-  };
-
-  const handleUnlockSuccess = (note: Note, action?: any) => {
-    setUnlockedNoteIds((prev) => new Set([...prev, note.id]));
-    showToast('Note unlocked');
-    if (action === 'view') setViewingNote(note);
-    else if (action === 'edit') { setEditingNote(note); setIsNoteModalOpen(true); }
-  };
-
-  const handleRelockNote = (id: string) => {
-    setUnlockedNoteIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-    if (viewingNote?.id === id) setViewingNote(null);
-    showToast('Note locked');
-  };
-
-  const handleLockAll = () => {
-    setUnlockedNoteIds(new Set());
-    if (viewingNote?.isLocked) setViewingNote(null);
-    showToast('All notes locked');
-  };
-
-  const handleToggleLockNote = (note: Note) => {
-    const nextLocked = !note.isLocked;
-    setNotes((prev) => {
-      const next = prev.map((n) => n.id === note.id ? { ...n, isLocked: nextLocked, password: nextLocked ? (n.password || MASTER_PASSWORD) : undefined, updatedAt: new Date().toISOString() } : n);
-      return next;
-    });
-    if (nextLocked) {
-      setUnlockedNoteIds((prev) => { const next = new Set(prev); next.delete(note.id); return next; });
-      if (viewingNote?.id === note.id) setViewingNote(null);
-    }
-    showToast(nextLocked ? 'Note locked' : 'Lock removed');
-  };
-
   const requestDeleteNote = (note: Note) => {
-    if (note.isLocked) { showToast('Unlock first', 'error'); return; }
     setDeleteModal({
       isOpen: true,
       noteTitle: note.title,
@@ -812,10 +737,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#14241D] text-[#F0F7F4] flex flex-col">
+    <div className="min-h-screen w-full bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col">
       <Navbar
         viewMode={viewMode}
         onToggleViewMode={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
         isTrashView={isTrashView}
         trashNotesCount={trashNotes.length}
         onToggleTrashView={setIsTrashView}
@@ -823,12 +750,13 @@ export default function App() {
         onExportNotes={handleExportNotes}
         onImportNotes={handleImportNotes}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenStats={() => setIsStatsModalOpen(true)}
         onSyncSheets={() => handleSyncToGoogleSheets()}
         isSyncingSheets={isSyncingSheets}
         onCheckUpdate={() => handleCheckAppUpdate()}
       />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-8 flex-1 w-full flex flex-col gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-3 sm:pt-5 pb-20 flex-1 w-full flex flex-col gap-3">
         <main className="flex-1 min-w-0">
           {isTrashView ? (
             <TrashView
@@ -842,26 +770,26 @@ export default function App() {
               onBackToNotes={() => setIsTrashView(false)}
             />
           ) : (
-            <div className="space-y-4">
-              {/* Search & Expandable Filter Controls */}
-              <div className="bg-[#162920] border border-[#2D4A3D] rounded-2xl p-3 space-y-3 shadow-sm">
-                {/* Primary Row: Search bar, Category filter, Other filter button */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                  {/* Search bar */}
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-[#8DA89B] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="space-y-3.5">
+              {/* 2-Row Search & Expandable Filter Controls */}
+              <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-2.5 space-y-2.5 shadow-xs">
+                {/* Row 1 (Single Horizontal Row): Search input, Color filter icon, Category filter icon, Other filter icon */}
+                <div className="flex flex-row items-center gap-1.5 sm:gap-2">
+                  {/* 1. Search input */}
+                  <div className="relative flex-1 min-w-0">
+                    <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search notes..."
-                      className="w-full pl-9 pr-8 py-2 bg-[#14241D] border border-[#2D4A3D] focus:border-[#D4AF37] rounded-xl text-xs sm:text-sm text-[#F0F7F4] placeholder-[#8DA89B]/60 focus:outline-none transition-colors"
+                      className="w-full pl-8 pr-7 py-1.5 bg-[var(--bg-elevated)] border border-[var(--border)] focus:border-[var(--accent-gold)] rounded-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)]/70 focus:outline-none transition-colors"
                     />
                     {searchQuery && (
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8DA89B] hover:text-[#F0F7F4] p-0.5 cursor-pointer"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-0.5 cursor-pointer"
                         title="Clear search"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -869,134 +797,293 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {/* Category filter */}
-                    <div className="relative flex-1 sm:flex-initial">
-                      <Folder className="w-3.5 h-3.5 text-[#D4AF37] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <select
-                        value={activeCategory}
-                        onChange={(e) => {
-                          setActiveCategory(e.target.value);
-                          setSelectedNoteIds([]);
-                        }}
-                        aria-label="Category filter"
-                        className="w-full sm:w-44 pl-8 pr-3 py-2 bg-[#14241D] border border-[#2D4A3D] focus:border-[#D4AF37] rounded-xl text-xs font-bold text-[#F0F7F4] focus:outline-none cursor-pointer transition-colors"
-                      >
-                        <option value="all">All Categories ({notes.length})</option>
-                        <option value="uncategorized">Uncategorized ({uncategorizedCount})</option>
-                        {categories.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat} ({categoryCounts[cat] || 0})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Other filter button */}
+                  {/* 2. Color filter icon */}
+                  <div className="relative shrink-0" ref={colorPopoverRef}>
                     <button
                       type="button"
-                      onClick={() => setIsOtherFiltersOpen((prev) => !prev)}
-                      className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                        isOtherFiltersOpen || sortMode !== 'newest' || dateFilter !== 'all'
-                          ? 'bg-[#D4AF37]/20 border-[#D4AF37]/60 text-[#D4AF37]'
-                          : 'bg-[#14241D] border-[#2D4A3D] text-[#8DA89B] hover:text-[#F0F7F4] hover:border-[#D4AF37]/40'
+                      onClick={() => {
+                        setIsColorPopoverOpen((prev) => !prev);
+                        setIsCategoryPopoverOpen(false);
+                      }}
+                      title="Color filter"
+                      aria-label="Color filter"
+                      className={`p-2 rounded-xl border transition-colors cursor-pointer flex items-center justify-center ${
+                        activeColorFilter || isColorPopoverOpen
+                          ? 'bg-[var(--accent-gold)]/15 border-[var(--accent-gold)] text-[var(--accent-gold)]'
+                          : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                       }`}
                     >
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                      <span>Other filter</span>
+                      {activeColorFilter ? (
+                        <span
+                          className="w-4 h-4 rounded-full ring-1 ring-white/50"
+                          style={{
+                            backgroundColor:
+                              COLOR_SWATCHES.find((c) => c.id === activeColorFilter)?.hex || '#3B82F6',
+                          }}
+                        />
+                      ) : (
+                        <Palette className="w-4 h-4" />
+                      )}
                     </button>
+
+                    {isColorPopoverOpen && (
+                      <div className="absolute right-0 top-full mt-2 z-50 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-2xl p-2.5 flex items-center gap-2 animate-in fade-in zoom-in-95 duration-150">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveColorFilter(null);
+                            setIsColorPopoverOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                            activeColorFilter === null
+                              ? 'border-[var(--accent-gold)] text-[var(--accent-gold)] bg-[var(--accent-gold)]/10'
+                              : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                          }`}
+                        >
+                          All
+                        </button>
+                        {COLOR_SWATCHES.map((swatch) => {
+                          const isSelected = activeColorFilter === swatch.id;
+                          return (
+                            <button
+                              key={swatch.id}
+                              type="button"
+                              onClick={() => {
+                                setActiveColorFilter(isSelected ? null : swatch.id);
+                                setIsColorPopoverOpen(false);
+                              }}
+                              className={`w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110 ${
+                                isSelected ? 'ring-2 ring-[var(--accent-gold)] ring-offset-1 ring-offset-[var(--bg-card)] scale-110' : ''
+                              }`}
+                              style={{ backgroundColor: swatch.hex }}
+                              title={swatch.id}
+                            >
+                              {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
+
+                  {/* 3. Category filter icon */}
+                  <div className="relative shrink-0" ref={categoryPopoverRef}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCategoryPopoverOpen((prev) => !prev);
+                        setIsColorPopoverOpen(false);
+                      }}
+                      title="Category filter"
+                      aria-label="Category filter"
+                      className={`p-2 rounded-xl border transition-colors cursor-pointer flex items-center justify-center relative ${
+                        activeCategory !== 'all' || isCategoryPopoverOpen
+                          ? 'bg-[var(--accent-gold)]/15 border-[var(--accent-gold)] text-[var(--accent-gold)]'
+                          : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      <Folder className="w-4 h-4" />
+                      {activeCategory !== 'all' && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--accent-gold)]" />
+                      )}
+                    </button>
+
+                    {isCategoryPopoverOpen && (
+                      <div className="absolute right-0 top-full mt-2 z-50 w-52 max-h-64 overflow-y-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-150">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategory('all');
+                            setSelectedNoteIds([]);
+                            setIsCategoryPopoverOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-bold cursor-pointer ${
+                            activeCategory === 'all'
+                              ? 'text-[var(--accent-gold)] bg-[var(--bg-elevated)]'
+                              : 'text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
+                          }`}
+                        >
+                          <span>All Categories</span>
+                          <span className="font-mono text-[10px] text-[var(--text-muted)]">{notes.length}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategory('uncategorized');
+                            setSelectedNoteIds([]);
+                            setIsCategoryPopoverOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-bold cursor-pointer ${
+                            activeCategory === 'uncategorized'
+                              ? 'text-[var(--accent-gold)] bg-[var(--bg-elevated)]'
+                              : 'text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
+                          }`}
+                        >
+                          <span>Uncategorized</span>
+                          <span className="font-mono text-[10px] text-[var(--text-muted)]">{uncategorizedCount}</span>
+                        </button>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => {
+                              setActiveCategory(cat);
+                              setSelectedNoteIds([]);
+                              setIsCategoryPopoverOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-bold cursor-pointer ${
+                              activeCategory === cat
+                                ? 'text-[var(--accent-gold)] bg-[var(--bg-elevated)]'
+                                : 'text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
+                            }`}
+                          >
+                            <span className="truncate">{cat}</span>
+                            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                              {categoryCounts[cat] || 0}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. Other filter icon */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOtherFiltersOpen((prev) => !prev);
+                      setIsColorPopoverOpen(false);
+                      setIsCategoryPopoverOpen(false);
+                    }}
+                    title="Other filter (Sort & Date)"
+                    aria-label="Other filter"
+                    className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 flex items-center justify-center ${
+                      isOtherFiltersOpen || sortMode !== 'newest' || dateFilter !== 'all'
+                        ? 'bg-[var(--accent-gold)]/15 border-[var(--accent-gold)] text-[var(--accent-gold)]'
+                        : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </button>
                 </div>
 
-                {/* Expandable Row (Revealed when Other filter is clicked): Sort & Date filter */}
+                {/* Row 2 (Expandable on clicking Other filter icon): Sort & Date filter */}
                 {isOtherFiltersOpen && (
-                  <div className="pt-2.5 border-t border-[#2D4A3D] grid grid-cols-1 sm:grid-cols-2 gap-2.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="pt-2 border-t border-[var(--border)] grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
                     {/* 1. Sort */}
-                    <div className="flex items-center gap-2 bg-[#14241D] border border-[#2D4A3D] rounded-xl px-3 py-1.5">
-                      <ArrowUpDown className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-                      <span className="text-[11px] font-bold text-[#8DA89B] shrink-0">Sort:</span>
+                    <div className="flex items-center gap-1.5 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-2.5 py-1.5 min-w-0">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
                       <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value as SortMode)}
-                        aria-label="Sort notes"
-                        className="flex-1 bg-transparent text-xs font-bold text-[#F0F7F4] focus:outline-none cursor-pointer py-0.5"
+                        aria-label="Sort"
+                        className="w-full bg-transparent text-xs font-bold text-[var(--text-primary)] focus:outline-none cursor-pointer truncate"
                       >
-                        <option value="newest" className="bg-[#162920]">Newest first</option>
-                        <option value="oldest" className="bg-[#162920]">Oldest first</option>
-                        <option value="updated" className="bg-[#162920]">Recently updated</option>
-                        <option value="title" className="bg-[#162920]">Title (A-Z)</option>
+                        <option value="newest" className="bg-[var(--bg-card)]">Newest first</option>
+                        <option value="oldest" className="bg-[var(--bg-card)]">Oldest first</option>
+                        <option value="updated" className="bg-[var(--bg-card)]">Recently updated</option>
+                        <option value="title" className="bg-[var(--bg-card)]">Title (A-Z)</option>
                       </select>
                     </div>
 
                     {/* 2. Date filter */}
-                    <div className="flex items-center gap-2 bg-[#14241D] border border-[#2D4A3D] rounded-xl px-3 py-1.5 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-1.5 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-2.5 py-1.5 min-w-0">
                       <Calendar className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-                      <span className="text-[11px] font-bold text-[#8DA89B] shrink-0">Date:</span>
                       <select
                         value={dateFilter}
                         onChange={(e) => setDateFilter(e.target.value as any)}
                         aria-label="Date filter"
-                        className="flex-1 bg-transparent text-xs font-bold text-[#F0F7F4] focus:outline-none cursor-pointer py-0.5 min-w-[100px]"
+                        className="w-full bg-transparent text-xs font-bold text-[var(--text-primary)] focus:outline-none cursor-pointer truncate"
                       >
-                        <option value="all" className="bg-[#162920]">All Dates</option>
-                        <option value="today" className="bg-[#162920]">Today</option>
-                        <option value="7days" className="bg-[#162920]">Last 7 Days</option>
-                        <option value="30days" className="bg-[#162920]">Last 30 Days</option>
-                        <option value="this_month" className="bg-[#162920]">This Month</option>
-                        <option value="custom" className="bg-[#162920]">Specific Date</option>
+                        <option value="all" className="bg-[var(--bg-card)]">All Dates</option>
+                        <option value="today" className="bg-[var(--bg-card)]">Today</option>
+                        <option value="7days" className="bg-[var(--bg-card)]">Last 7 Days</option>
+                        <option value="30days" className="bg-[var(--bg-card)]">Last 30 Days</option>
+                        <option value="this_month" className="bg-[var(--bg-card)]">This Month</option>
+                        <option value="custom" className="bg-[var(--bg-card)]">Specific Date</option>
                       </select>
-                      {dateFilter === 'custom' && (
+                    </div>
+
+                    {dateFilter === 'custom' && (
+                      <div className="col-span-2 flex items-center justify-end">
                         <input
                           type="date"
                           value={customDate}
                           onChange={(e) => setCustomDate(e.target.value)}
-                          className="bg-[#162920] border border-[#2D4A3D] rounded-lg px-2 py-0.5 text-[11px] text-[#F0F7F4] focus:outline-none focus:border-[#D4AF37]"
+                          className="w-full sm:w-auto bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-gold)]"
                         />
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="text-lg font-bold">
+              {/* Active Filters / Note Count Bar */}
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-[var(--text-primary)]">
                     {activeCategory === 'all'
                       ? 'All Notes'
                       : activeCategory === 'uncategorized'
                       ? 'Uncategorized'
                       : activeCategory}
-                  </h2>
+                  </span>
+                  {activeColorFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveColorFilter(null)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--bg-card)] border border-[var(--border)] text-[10px] font-bold text-[var(--text-muted)] cursor-pointer"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{
+                          backgroundColor:
+                            COLOR_SWATCHES.find((c) => c.id === activeColorFilter)?.hex || '#3B82F6',
+                        }}
+                      />
+                      <span>Clear color</span>
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  )}
                 </div>
-                <span className="text-xs text-[#8DA89B] font-semibold">{filteredNotes.length} notes</span>
+                <span className="text-xs text-[var(--text-muted)] font-semibold">{filteredNotes.length} notes</span>
               </div>
-              
-              <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
-                {filteredNotes.slice(0, displayLimit).map(note => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    viewMode={viewMode}
-                    isSelected={selectedNoteIds.includes(note.id)}
-                    isSelectionActive={selectedNoteIds.length > 0}
-                    onSelect={(id) => setSelectedNoteIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
-                    onLongPress={handleLongPressNote}
-                    onView={setViewingNote}
-                    onEdit={(n) => { setEditingNote(n); setIsNoteModalOpen(true); }}
-                    onDelete={requestDeleteNote}
-                    onShowToast={showToast}
-                  />
-                ))}
-              </div>
+
+              {filteredNotes.length === 0 ? (
+                <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-10 text-center space-y-3">
+                  <p className="text-sm font-bold text-[var(--text-primary)]">No notes found</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Tap + to write a new note or tap Sync to fetch notes from Google Sheets.
+                  </p>
+                </div>
+              ) : (
+                <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5' : 'space-y-2.5'}>
+                  {filteredNotes.slice(0, displayLimit).map(note => (
+                    <NoteCard
+                      key={note.id}
+                      note={note}
+                      viewMode={viewMode}
+                      isSelected={selectedNoteIds.includes(note.id)}
+                      isSelectionActive={selectedNoteIds.length > 0}
+                      onSelect={(id) => setSelectedNoteIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
+                      onLongPress={handleLongPressNote}
+                      onView={setViewingNote}
+                      onEdit={(n) => { setEditingNote(n); setIsNoteModalOpen(true); }}
+                      onDelete={requestDeleteNote}
+                      onShowToast={showToast}
+                    />
+                  ))}
+                </div>
+              )}
 
               {filteredNotes.length > displayLimit && (
                 <div className="flex justify-center pt-3 pb-6">
                   <button
                     type="button"
                     onClick={() => setDisplayLimit(prev => prev + 60)}
-                    className="px-5 py-2 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#D4AF37] hover:text-[#F0F7F4] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                    className="px-5 py-2 bg-[var(--bg-card)] border border-[var(--border)] text-[var(--accent-gold)] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                   >
-                    + আরো নোট লোড করুন ({filteredNotes.length - displayLimit}টি বাকি)
+                    Load more ({filteredNotes.length - displayLimit} remaining)
                   </button>
                 </div>
               )}
@@ -1020,18 +1107,7 @@ export default function App() {
         onClose={() => setViewingNote(null)}
         onEdit={(n) => { setEditingNote(n); setIsNoteModalOpen(true); }}
         onDelete={requestDeleteNote}
-        onTogglePin={handleTogglePin}
-        onToggleLockNote={handleToggleLockNote}
-        onRelockNote={handleRelockNote}
         onShowToast={showToast}
-      />
-
-      <PasswordModal
-        isOpen={passwordModal.isOpen}
-        note={passwordModal.note}
-        targetAction={passwordModal.targetAction}
-        onUnlockSuccess={handleUnlockSuccess}
-        onClose={() => setPasswordModal({ isOpen: false, note: null })}
       />
 
       <DeleteConfirmModal
@@ -1066,14 +1142,23 @@ export default function App() {
         onClose={() => setIsBatchCategoryModalOpen(false)}
       />
 
+      <StatsModal
+        isOpen={isStatsModalOpen}
+        notes={notes}
+        trashCount={trashNotes.length}
+        categoriesCount={categories.length}
+        onClose={() => setIsStatsModalOpen(false)}
+      />
+
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         onExportNotes={handleExportNotes}
         onImportNotes={handleImportNotes}
-        currentUser={currentUser}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
+        sheetsUrl={sheetsUrl}
+        onSaveSheetsUrl={handleSaveSheetsUrl}
+        onSyncSheets={() => handleSyncToGoogleSheets()}
+        isSyncingSheets={isSyncingSheets}
         onTriggerCheckUpdate={() => handleCheckAppUpdate()}
       />
 

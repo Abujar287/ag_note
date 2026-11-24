@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   X,
   Settings,
@@ -11,15 +11,13 @@ import {
   Copy,
   Check,
   CheckCircle2,
-  LogOut,
-  LogIn,
-  User as UserIcon,
+  Save,
 } from 'lucide-react';
-import { User } from 'firebase/auth';
 import { usePWAInstall } from '../utils/usePWAInstall';
 import {
   APPS_SCRIPT_SOURCE_CODE,
   GOOGLE_SHEET_URL,
+  FIXED_APPS_SCRIPT_URL,
 } from '../config/syncConfig';
 
 interface SettingsModalProps {
@@ -27,21 +25,11 @@ interface SettingsModalProps {
   onClose: () => void;
   onExportNotes: () => void;
   onImportNotes: (file: File) => void;
-  currentUser?: User | null;
-  onLogin?: () => void;
-  onLogout?: () => void;
-  onTriggerCheckUpdate?: () => void;
-  // Optional legacy props kept for type safety without cluttering the UI
-  totalNotes?: number;
-  pinnedCount?: number;
-  lockedCount?: number;
-  trashCount?: number;
-  categoryCount?: number;
-  onEmptyTrash?: () => void;
   sheetsUrl?: string;
   onSaveSheetsUrl?: (url: string) => void;
   onSyncSheets?: () => void;
   isSyncingSheets?: boolean;
+  onTriggerCheckUpdate?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -49,47 +37,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onExportNotes,
   onImportNotes,
-  currentUser,
-  onLogin,
-  onLogout,
+  sheetsUrl,
+  onSaveSheetsUrl,
+  onSyncSheets,
+  isSyncingSheets,
   onTriggerCheckUpdate,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isInstallable, isInstalled, install } = usePWAInstall();
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState(sheetsUrl || FIXED_APPS_SCRIPT_URL);
+  const [urlSaved, setUrlSaved] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [installTip, setInstallTip] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUrlInput(sheetsUrl || FIXED_APPS_SCRIPT_URL);
+      setUrlSaved(false);
+      setInstallTip(false);
+    }
+  }, [isOpen, sheetsUrl]);
 
   if (!isOpen) return null;
-
-  const handleCheckUpdates = async () => {
-    if (onTriggerCheckUpdate) {
-      onClose();
-      onTriggerCheckUpdate();
-      return;
-    }
-    setIsCheckingUpdate(true);
-    setUpdateMessage('GitHub আপডেট ও সার্ভিস ওয়ার্কার চেক করা হচ্ছে...');
-    try {
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) {
-          await reg.update();
-          setUpdateMessage('সর্বশেষ সংস্করণ সক্রিয় আছে! (Up to date)');
-        } else {
-          setUpdateMessage('অফলাইন সার্ভিস ওয়ার্কার সক্রিয় আছে।');
-        }
-      } else {
-        setUpdateMessage('ব্রাউজার ক্যাশ ও লোকাল ডেটা সক্রিয় আছে।');
-      }
-    } catch {
-      setUpdateMessage('আপডেট চেক সম্পন্ন হয়েছে।');
-    } finally {
-      setTimeout(() => {
-        setIsCheckingUpdate(false);
-      }, 1000);
-    }
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,6 +66,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       onImportNotes(file);
       e.target.value = '';
       onClose();
+    }
+  };
+
+  const handleSaveUrl = () => {
+    if (onSaveSheetsUrl) {
+      onSaveSheetsUrl(urlInput.trim());
+      setUrlSaved(true);
+      setTimeout(() => setUrlSaved(false), 2000);
     }
   };
 
@@ -108,146 +85,130 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-[#162920] rounded-2xl shadow-2xl border border-[#2D4A3D] overflow-hidden my-auto animate-in zoom-in-95 duration-150 flex flex-col"
+        className="w-full max-w-lg bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border)] overflow-hidden my-auto animate-in zoom-in-95 duration-150 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2D4A3D] bg-[#14241D] shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center">
-              <Settings className="w-4 h-4 text-[#D4AF37]" />
+            <div className="w-8 h-8 rounded-full bg-[var(--accent-gold)]/15 border border-[var(--accent-gold)]/30 flex items-center justify-center">
+              <Settings className="w-4 h-4 text-[var(--accent-gold)]" />
             </div>
             <div>
-              <h3 className="font-bold text-[#F0F7F4] text-base leading-tight">
-                Notepad Settings (সেটিংস)
+              <h3 className="font-bold text-[var(--text-primary)] text-base leading-tight">
+                Google Sheet & Sync Settings
               </h3>
-              <p className="text-[11px] text-[#8DA89B]">
-                অ্যাপ ইনস্টল, অ্যাপ স্ক্রিপ্ট, ব্যাকআপ ও অ্যাকাউন্ট নিয়ন্ত্রণ
+              <p className="text-[11px] text-[var(--text-muted)]">
+                Configure Google Sheet sync, backup, and app installation
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-[#8DA89B] hover:text-[#F0F7F4] p-1.5 rounded-lg hover:bg-[#2D4A3D] transition-colors cursor-pointer"
+            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1.5 rounded-lg hover:bg-[var(--border)]/40 transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body: ONLY 4 items: Apps install, Apps Script, JSON backup, logout */}
+        {/* Body */}
         <div className="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* 1. Apps install */}
-          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
+          {/* Google Sheet Setup / Sync Settings */}
+          <div className="bg-[var(--bg-elevated)] p-4 rounded-xl border border-[var(--border)] space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
-                <Smartphone className="w-4 h-4 text-[#D4AF37]" />
-                <span>1. Apps Install (অ্যাপ ইনস্টল ও আপডেট)</span>
+              <h4 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-[#10B981]" />
+                <span>Google Sheets Sync Setup</span>
               </h4>
-              <span className="text-[10px] font-mono text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded-full border border-[#10B981]/30">
-                PWA Ready
-              </span>
+              <a
+                href={GOOGLE_SHEET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-bold text-[var(--accent-gold)] hover:underline flex items-center gap-1"
+              >
+                <span>Open Sheet</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
 
-            <p className="text-xs text-[#8DA89B] leading-relaxed">
-              আপনার ফোনে বা কম্পিউটারে হোমস্ক্রিন অ্যাপ হিসেবে ইনস্টল করুন। GitHub-এ কোড আপডেট হলে ফোনে স্বয়ংক্রিয়ভাবে আপডেট চলে আসবে এবং কোনো নোট হারাবে না।
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleCheckUpdates}
-                disabled={isCheckingUpdate}
-                className="flex-1 py-2 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] hover:border-[#D4AF37]/50 text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
-              >
-                <RefreshCw
-                  className={`w-3.5 h-3.5 text-[#D4AF37] ${
-                    isCheckingUpdate ? 'animate-spin' : ''
-                  }`}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                Apps Script Web App URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://script.google.com/macros/s/.../exec"
+                  className="flex-1 px-3 py-2 bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent-gold)] rounded-xl text-xs font-mono text-[var(--text-primary)] focus:outline-none"
                 />
-                <span>{isCheckingUpdate ? 'চেক করা হচ্ছে...' : 'আপডেট চেক করুন'}</span>
-              </button>
-
-              {!isInstalled ? (
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (isInstallable) {
-                      await install();
-                    } else {
-                      window.dispatchEvent(new CustomEvent('open-pwa-guide'));
-                    }
-                  }}
-                  className="flex-1 py-2 px-3 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#14241D] rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shadow-xs"
+                  onClick={handleSaveUrl}
+                  className="px-3 py-2 bg-[var(--accent-gold)] text-[#14241D] rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer active:scale-95"
                 >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>ফোনে অ্যাপ ইনস্টল করুন</span>
+                  {urlSaved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>{urlSaved ? 'Saved' : 'Save'}</span>
                 </button>
-              ) : (
-                <div className="flex-1 py-2 px-3 bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>অ্যাপ ইনস্টল করা আছে</span>
-                </div>
-              )}
+              </div>
             </div>
 
-            {updateMessage && (
-              <p className="text-xs text-[#10B981] font-medium bg-[#10B981]/10 p-2 rounded-lg border border-[#10B981]/20 flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-                <span>{updateMessage}</span>
-              </p>
-            )}
-          </div>
-
-          {/* 2. Google sheet apps script - just one button */}
-          <div className="bg-[#12211A] p-3 rounded-xl border border-[#2D4A3D]">
-            <button
-              type="button"
-              onClick={handleCopyAppsScript}
-              className="w-full py-3 px-4 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] hover:border-[#10B981]/50 text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all active:scale-95 cursor-pointer shadow-xs"
-            >
-              {copiedCode ? (
-                <Check className="w-4 h-4 text-[#10B981]" />
-              ) : (
-                <FileSpreadsheet className="w-4 h-4 text-[#10B981]" />
+            <div className="flex flex-col sm:flex-row gap-2">
+              {onSyncSheets && (
+                <button
+                  type="button"
+                  onClick={onSyncSheets}
+                  disabled={isSyncingSheets}
+                  className="flex-1 py-2 px-3 bg-[var(--bg-card)] hover:border-[var(--accent-gold)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-[#10B981] ${isSyncingSheets ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingSheets ? 'Syncing...' : 'Sync Now'}</span>
+                </button>
               )}
-              <span className={copiedCode ? 'text-[#10B981]' : ''}>
-                {copiedCode
-                  ? 'Apps Script কোড কপি হয়েছে!'
-                  : 'Google Sheet Apps Script (কোড কপি করুন)'}
-              </span>
-            </button>
+
+              <button
+                type="button"
+                onClick={handleCopyAppsScript}
+                className="flex-1 py-2 px-3 bg-[var(--bg-card)] hover:border-[#10B981] border border-[var(--border)] text-[var(--text-primary)] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {copiedCode ? (
+                  <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-[#10B981]" />
+                )}
+                <span>{copiedCode ? 'Copied Code!' : 'Copy Apps Script'}</span>
+              </button>
+            </div>
           </div>
 
-          {/* 3. JSON backup */}
-          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
-            <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
-              <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
-              <span>3. JSON Backup & Restore (ব্যাকআপ ও রিস্টোর)</span>
+          {/* Backup & Restore */}
+          <div className="bg-[var(--bg-elevated)] p-4 rounded-xl border border-[var(--border)] space-y-3">
+            <h4 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+              <Download className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+              <span>JSON Backup & Restore</span>
             </h4>
-            <p className="text-xs text-[#8DA89B] leading-relaxed">
-              আপনার সমস্ত নোট অফলাইনে নিরাপদে সংরক্ষণ করতে JSON ফাইল ডাউনলোড করুন অথবা আগের কোনো ব্যাকআপ ফাইল নির্বাচন করে পুনরায় ফিরিয়ে আনুন:
-            </p>
-            <div className="flex gap-2.5 pt-1">
+            <div className="flex gap-2.5">
               <button
                 type="button"
                 onClick={onExportNotes}
-                className="flex-1 py-2.5 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-xs"
+                className="flex-1 py-2.5 px-3 bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Download className="w-4 h-4 text-[#D4AF37]" />
-                <span>Backup ডাউনলোড</span>
+                <Download className="w-4 h-4 text-[var(--accent-gold)]" />
+                <span>Export JSON</span>
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 py-2.5 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#F0F7F4] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-xs"
+                className="flex-1 py-2.5 px-3 bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Upload className="w-4 h-4 text-[#10B981]" />
-                <span>Backup রিস্টোর</span>
+                <span>Restore JSON</span>
               </button>
               <input
                 type="file"
@@ -259,105 +220,62 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* 4. Logout / Account */}
-          <div className="bg-[#12211A] p-4 rounded-xl border border-[#2D4A3D] space-y-3">
-            <h4 className="text-xs font-bold text-[#F0F7F4] flex items-center gap-1.5">
-              <LogOut className="w-3.5 h-3.5 text-[#D4AF37]" />
-              <span>4. Logout & Account (লগআউট)</span>
+          {/* Install & Check Update */}
+          <div className="bg-[var(--bg-elevated)] p-4 rounded-xl border border-[var(--border)] space-y-3">
+            <h4 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+              <Smartphone className="w-4 h-4 text-[var(--accent-gold)]" />
+              <span>App Install & Updates</span>
             </h4>
-
-            {currentUser ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 bg-[#162920] p-3 rounded-xl border border-[#2D4A3D]">
-                  {currentUser.photoURL ? (
-                    <img
-                      src={currentUser.photoURL}
-                      alt={currentUser.displayName || 'User'}
-                      className="w-10 h-10 rounded-full border border-[#D4AF37]/40 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center font-bold text-sm shrink-0">
-                      {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-[#F0F7F4] truncate">
-                      {currentUser.displayName || 'Google User'}
-                    </p>
-                    <p className="text-[11px] text-[#8DA89B] truncate">
-                      {currentUser.email || 'Logged in'}
-                    </p>
-                  </div>
-                  <span className="text-[10px] text-[#10B981] bg-[#10B981]/15 px-2 py-0.5 rounded-full border border-[#10B981]/30 shrink-0 font-semibold">
-                    সক্রিয়
-                  </span>
-                </div>
-
+            <div className="flex flex-col sm:flex-row gap-2">
+              {onTriggerCheckUpdate && (
                 <button
                   type="button"
                   onClick={() => {
-                    if (onLogout) onLogout();
                     onClose();
+                    onTriggerCheckUpdate();
                   }}
-                  className="w-full py-2.5 px-4 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shadow-xs"
+                  className="flex-1 py-2 px-3 bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span>লগআউট করুন (Logout)</span>
+                  <RefreshCw className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                  <span>Check Update</span>
                 </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 bg-[#162920] p-3 rounded-xl border border-[#2D4A3D]">
-                  <div className="w-9 h-9 rounded-full bg-[#244234] border border-[#2D4A3D] text-[#8DA89B] flex items-center justify-center shrink-0">
-                    <UserIcon className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-[#F0F7F4]">
-                      কোনো অ্যাকাউন্ট লগইন করা নেই
-                    </p>
-                    <p className="text-[11px] text-[#8DA89B]">
-                      নোটসমূহ লোকাল স্টোরেজে সুরক্ষিতভাবে সেভ আছে
-                    </p>
-                  </div>
-                </div>
+              )}
 
-                <div className="flex gap-2">
-                  {onLogin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onLogin();
-                      }}
-                      className="flex-1 py-2 px-3 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#14241D] rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
-                    >
-                      <LogIn className="w-3.5 h-3.5" />
-                      <span>Google দিয়ে লগইন করুন</span>
-                    </button>
-                  )}
-                  {onLogout && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onLogout();
-                        onClose();
-                      }}
-                      className="py-2 px-3 bg-[#162920] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#8DA89B] hover:text-[#F0F7F4] rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                      <span>লগআউট</span>
-                    </button>
-                  )}
+              {!isInstalled ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (isInstallable) {
+                      await install();
+                    } else {
+                      setInstallTip((prev) => !prev);
+                    }
+                  }}
+                  className="flex-1 py-2 px-3 bg-[var(--accent-gold)] text-[#14241D] rounded-xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Install App</span>
+                </button>
+              ) : (
+                <div className="flex-1 py-2 px-3 bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>App Installed</span>
                 </div>
-              </div>
+              )}
+            </div>
+            {installTip && !isInstalled && (
+              <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                Open your browser menu (⋮) and choose &quot;Add to Home screen&quot; or &quot;Install app&quot; to install Notedpad.
+              </p>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 bg-[#14241D] border-t border-[#2D4A3D] flex justify-end shrink-0">
+        <div className="px-5 py-3.5 bg-[var(--bg-elevated)] border-t border-[var(--border)] flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[#D4AF37] hover:bg-[#D4AF37]/90 rounded-xl shadow-lg transition-transform active:scale-95 cursor-pointer"
+            className="px-6 py-2 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[var(--accent-gold)] rounded-xl shadow-md transition-transform active:scale-95 cursor-pointer"
           >
             Close
           </button>

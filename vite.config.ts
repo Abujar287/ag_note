@@ -14,9 +14,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'AG NOTEPAD',
-          short_name: 'AG NOTEPAD',
-          description: 'AG NOTEPAD - Smart Offline & Cloud Notepad. একটি আধুনিক ও দ্রুত বাংলা নোটপ্যাড অ্যাপ।',
+          name: 'Notedpad',
+          short_name: 'Notedpad',
+          description: 'Notedpad - AG Notepad. একটি আধুনিক ও দ্রুত বাংলা নোটপ্যাড অ্যাপ।',
           theme_color: '#14241D',
           background_color: '#14241D',
           display: 'standalone',
@@ -51,8 +51,7 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
@@ -94,6 +93,24 @@ export default defineConfig(() => {
         },
       }),
     ],
+    build: {
+      minify: true,
+      cssMinify: true,
+      sourcemap: false,
+      target: 'es2020',
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+              return 'react';
+            }
+            if (id.includes('node_modules/lucide-react')) {
+              return 'icons';
+            }
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname, '.'),
@@ -111,4 +128,3 @@ export default defineConfig(() => {
     },
   };
 });
-
