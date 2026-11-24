@@ -30,6 +30,7 @@ interface SettingsModalProps {
   currentUser?: User | null;
   onLogin?: () => void;
   onLogout?: () => void;
+  onTriggerCheckUpdate?: () => void;
   // Optional legacy props kept for type safety without cluttering the UI
   totalNotes?: number;
   pinnedCount?: number;
@@ -51,6 +52,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   currentUser,
   onLogin,
   onLogout,
+  onTriggerCheckUpdate,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isInstallable, isInstalled, install } = usePWAInstall();
@@ -61,6 +63,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const handleCheckUpdates = async () => {
+    if (onTriggerCheckUpdate) {
+      onClose();
+      onTriggerCheckUpdate();
+      return;
+    }
     setIsCheckingUpdate(true);
     setUpdateMessage('GitHub আপডেট ও সার্ভিস ওয়ার্কার চেক করা হচ্ছে...');
     try {

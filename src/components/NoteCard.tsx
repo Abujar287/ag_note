@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pin, Edit3, Trash2, Copy, Check, Lock, Unlock } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Edit3, Trash2, Copy, Check } from 'lucide-react';
 import { Note, NOTE_COLORS, ViewMode } from '../types/note';
 import { formatDate, getFirstLine } from '../utils/banglaUtils';
 
@@ -8,72 +8,91 @@ interface NoteCardProps {
   viewMode: ViewMode;
   isSelected?: boolean;
   isUnlocked?: boolean;
+  isSelectionActive?: boolean;
   onSelect?: (id: string) => void;
+  onLongPress?: (id: string) => void;
   onView: (note: Note) => void;
   onEdit: (note: Note) => void;
   onDelete: (note: Note) => void;
-  onTogglePin: (id: string) => void;
-  onToggleLockNote?: (note: Note) => void;
-  onUnlockRequest: (note: Note, action?: 'view' | 'edit') => void;
-  onRelockNote?: (id: string) => void;
   onShowToast: (msg: string) => void;
+  // Optional legacy props kept for type compatibility
+  onTogglePin?: (id: string) => void;
+  onToggleLockNote?: (note: Note) => void;
+  onUnlockRequest?: (note: Note, action?: 'view' | 'edit') => void;
+  onRelockNote?: (id: string) => void;
 }
 
 export const NoteCard: React.FC<NoteCardProps> = ({
   note,
   viewMode,
   isSelected = false,
-  isUnlocked = false,
+  isSelectionActive = false,
   onSelect,
+  onLongPress,
   onView,
   onEdit,
   onDelete,
-  onTogglePin,
-  onToggleLockNote,
-  onUnlockRequest,
-  onRelockNote,
   onShowToast,
 }) => {
   const [copied, setCopied] = useState(false);
   const colorConfig = NOTE_COLORS.find((c) => c.id === note.color) || NOTE_COLORS[0];
   const firstLine = getFirstLine(note.content);
 
-  const isLockedActive = Boolean(note.isLocked && !isUnlocked);
+  const timerRef = useRef<any>(null);
+  const isLongPressRef = useRef(false);
+
+  const startPressTimer = (e: React.PointerEvent) => {
+    // If click originated from button or checkbox, don't trigger long press
+    if ((e.target as HTMLElement).closest('button, input')) return;
+    isLongPressRef.current = false;
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      if (onLongPress) {
+        onLongPress(note.id);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(40);
+        }
+      } else if (onSelect) {
+        onSelect(note.id);
+      }
+    }, 450);
+  };
+
+  const cancelPressTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   const handleCardClick = () => {
-    if (isLockedActive) {
-      onUnlockRequest(note, 'view');
-    } else {
-      onView(note);
+    if (isLongPressRef.current) {
+      isLongPressRef.current = false;
+      return;
     }
+    // In multi-selection mode, tapping any note toggles its selection
+    if (isSelectionActive && onSelect) {
+      onSelect(note.id);
+      return;
+    }
+    onView(note);
   };
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isLockedActive) {
-      onUnlockRequest(note, 'view');
-      return;
-    }
-    const fullText = `${note.title}\n\n${note.content}`;
+    const fullText = note.title ? `${note.title}\n\n${note.content}` : note.content;
     navigator.clipboard.writeText(fullText).then(() => {
       setCopied(true);
       onShowToast('Note copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      onShowToast('Could not copy note');
     });
-  };
-
-  const handlePin = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onTogglePin(note.id);
   };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isLockedActive) {
-      onUnlockRequest(note, 'edit');
-    } else {
-      onEdit(note);
-    }
+    onEdit(note);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -81,172 +100,101 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     onDelete(note);
   };
 
-  const handleLockClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!note.isLocked) {
-      // Not locked -> lock it with password
-      if (onToggleLockNote) {
-        onToggleLockNote(note);
-      }
-    } else if (isLockedActive) {
-      // Locked and active -> prompt password dialog
-      onUnlockRequest(note, 'view');
-    } else {
-      // Unlocked in current session -> re-lock it immediately
-      if (onRelockNote) {
-        onRelockNote(note.id);
-        onShowToast('Note locked');
-      }
-    }
-  };
-
-  // ==================== List View (Ultra compact row) ====================
-  // Format requested: [checkbox] [dot] [title]   [datetime] [pin] [copy] [edit] [remove] [lock]
+  // ==================== List View ====================
+  // Buttons ONLY: Copy, Edit, Remove
   if (viewMode === 'list') {
     return (
       <div
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData('text/plain', note.id);
+        onPointerDown={startPressTimer}
+        onPointerUp={cancelPressTimer}
+        onPointerCancel={cancelPressTimer}
+        onPointerLeave={cancelPressTimer}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (onLongPress) onLongPress(note.id);
+          else if (onSelect) onSelect(note.id);
         }}
         onClick={handleCardClick}
-        className={`group relative flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border transition-all cursor-pointer hover:shadow-xs active:cursor-grabbing ${
-          isLockedActive
-            ? 'border-[var(--accent-gold)] bg-[var(--accent-gold)]/10'
-            : isSelected
-            ? 'border-[var(--accent-gold)] bg-[var(--accent-gold)]/20 ring-1 ring-[var(--accent-gold)]'
-            : 'border-[var(--border)] hover:border-[var(--accent-gold)]'
+        className={`group relative flex items-center justify-between gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none ${
+          isSelected
+            ? 'border-[#D4AF37] bg-[#D4AF37]/15 ring-1 ring-[#D4AF37]'
+            : 'border-[#2D4A3D] bg-[#162920] hover:border-[#D4AF37]/60'
         }`}
       >
-        {/* Left Side: Checkbox, Color dot, Title & preview */}
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {onSelect && (
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onSelect(note.id);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-3.5 h-3.5 rounded text-[var(--accent-gold)] focus:ring-[var(--accent-gold)]/20 cursor-pointer shrink-0"
-              />
+        {/* Left Side: Checkbox (visible when selection active or selected), Color dot, Title & preview */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {onSelect && (isSelectionActive || isSelected) && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSelect(note.id);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 rounded text-[#D4AF37] focus:ring-[#D4AF37]/20 cursor-pointer shrink-0 accent-[#D4AF37]"
+            />
           )}
 
-          <div
-            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-              isLockedActive ? 'bg-[var(--accent-gold)]' : colorConfig.dotClass
-            }`}
-          />
+          <div className={`w-2 h-2 rounded-full shrink-0 ${colorConfig.dotClass}`} />
 
-          {/* Title / Locked state */}
-          {isLockedActive ? (
-            <div className="flex items-center gap-1 min-w-0">
-              <Lock className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
-              <span className="text-[11px] sm:text-xs font-bold text-[var(--accent-gold)]">
-                Locked
+          <div className="flex items-baseline gap-2 min-w-0 overflow-hidden">
+            <h3 className="text-xs sm:text-sm font-bold text-[#F0F7F4] truncate group-hover:text-[#D4AF37] transition-colors shrink-0 max-w-[120px] sm:max-w-[220px]">
+              {note.title || 'Untitled Note'}
+            </h3>
+
+            {firstLine && (
+              <span className="text-[11px] text-[#8DA89B] truncate hidden md:inline-block flex-1 min-w-0 font-normal">
+                {firstLine}
               </span>
-            </div>
-          ) : (
-            <div className="flex items-baseline gap-1.5 min-w-0 overflow-hidden">
-              <h3 className="text-[11px] sm:text-xs font-bold text-[var(--text-primary)] truncate group-hover:text-[var(--accent-gold)] transition-colors shrink-0 max-w-[100px] sm:max-w-[200px]">
-                {note.title}
-              </h3>
-
-              {/* 1st Line preview only */}
-              {firstLine && (
-                <span className="text-[10px] text-[var(--text-primary)]/50 truncate hidden md:inline-block flex-1 min-w-0">
-                  {firstLine}
-                </span>
-              )}
-            </div>
-          )}
-
-          {note.isPinned && (
-            <Pin className="w-2.5 h-2.5 text-[var(--accent-gold)] fill-[var(--accent-gold)] shrink-0" />
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Right side: category, datetime, pin, copy, edit, remove, lock */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Category tag */}
-          <span className="font-bold text-[9px] text-[var(--accent-gold)] uppercase tracking-tight bg-[var(--border)] px-1 py-0.5 rounded max-w-[60px] truncate">
+        {/* Right side: Category, Datetime, and EXACTLY 3 ACTIONS: Copy, Edit, Remove */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <span className="font-bold text-[9.5px] text-[#D4AF37] uppercase tracking-wider bg-[#14241D] px-1.5 py-0.5 rounded border border-[#2D4A3D] max-w-[75px] truncate">
             {note.category || 'General'}
           </span>
 
-          {/* Datetime (DD-Mon-YY hh:mmA) */}
-          <span className="font-mono tabular-nums text-[9.5px] font-semibold text-[var(--text-primary)]/70 shrink-0">
+          <span className="font-mono tabular-nums text-[10px] font-medium text-[#8DA89B] shrink-0 hidden sm:inline">
             {formatDate(note.updatedAt || note.createdAt || note.rawDate)}
           </span>
 
-          {/* Action buttons in exact requested order: pin, copy, edit, remove, lock */}
-          <div className="flex items-center gap-0.5 shrink-0">
-            {/* 1. PIN */}
-            <button
-              type="button"
-              onClick={handlePin}
-              title={note.isPinned ? 'Unpin' : 'Pin'}
-              className="p-1 text-[var(--text-primary)]/50 hover:text-[var(--accent-gold)] transition-colors cursor-pointer"
-            >
-              <Pin className={`w-3 h-3 ${note.isPinned ? 'text-[var(--accent-gold)] fill-[var(--accent-gold)]' : ''}`} />
-            </button>
-
-            {/* 2. COPY */}
+          {/* EXACTLY 3 BUTTONS: Copy, Edit, Remove */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* 1. Copy */}
             <button
               type="button"
               onClick={handleCopy}
               title="Copy"
-              className="p-1 text-[var(--text-primary)]/50 hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              className="p-1.5 text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-lg transition-colors cursor-pointer"
             >
               {copied ? (
-                <Check className="w-3 h-3 text-emerald-500" />
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
-                <Copy className="w-3 h-3" />
+                <Copy className="w-3.5 h-3.5" />
               )}
             </button>
 
-            {/* 3. EDIT */}
+            {/* 2. Edit */}
             <button
               type="button"
               onClick={handleEdit}
               title="Edit"
-              className="p-1 text-[var(--text-primary)]/50 hover:text-[var(--accent-gold)] transition-colors cursor-pointer"
+              className="p-1.5 text-[#8DA89B] hover:text-[#D4AF37] hover:bg-[#244234] rounded-lg transition-colors cursor-pointer"
             >
-              <Edit3 className="w-3 h-3" />
+              <Edit3 className="w-3.5 h-3.5" />
             </button>
 
-            {/* 4. REMOVE (Trash) */}
+            {/* 3. Remove */}
             <button
               type="button"
               onClick={handleDelete}
               title="Remove"
-              className="p-1 text-[var(--text-primary)]/50 hover:text-rose-500 transition-colors cursor-pointer"
+              className="p-1.5 text-[#8DA89B] hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
             >
-              <Trash2 className="w-3 h-3" />
-            </button>
-
-            {/* 5. LOCK */}
-            <button
-              type="button"
-              onClick={handleLockClick}
-              title={
-                !note.isLocked
-                  ? 'Lock'
-                  : isLockedActive
-                  ? 'Unlock'
-                  : 'Re-lock'
-              }
-              className={`p-1 transition-colors cursor-pointer ${
-                note.isLocked
-                  ? 'text-[var(--accent-gold)] hover:text-[var(--accent-gold)]/80'
-                  : 'text-[var(--text-primary)]/50 hover:text-[var(--accent-gold)]'
-              }`}
-            >
-              {note.isLocked && !isLockedActive ? (
-                <Unlock className="w-3 h-3" />
-              ) : (
-                <Lock className={`w-3 h-3 ${note.isLocked ? 'fill-[var(--accent-gold)]/20' : ''}`} />
-              )}
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -254,27 +202,31 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     );
   }
 
-  // ==================== Grid View: Ultra Compact card ====================
+  // ==================== Grid View ====================
+  // Buttons ONLY: Copy, Edit, Remove
   return (
     <div
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', note.id);
+      onPointerDown={startPressTimer}
+      onPointerUp={cancelPressTimer}
+      onPointerCancel={cancelPressTimer}
+      onPointerLeave={cancelPressTimer}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (onLongPress) onLongPress(note.id);
+        else if (onSelect) onSelect(note.id);
       }}
       onClick={handleCardClick}
-      className={`group relative flex flex-col justify-between p-2.5 rounded-xl border transition-all cursor-pointer hover:shadow-md active:cursor-grabbing ${
-        isLockedActive
-          ? 'border-[var(--border)] bg-[var(--bg-card)]'
-          : isSelected
-          ? 'border-[var(--accent-gold)] bg-[var(--bg-card)] ring-1 ring-[var(--accent-gold)]'
-          : 'border-[var(--border)] hover:border-[var(--accent-gold)] bg-[var(--bg-card)]'
+      className={`group relative flex flex-col justify-between p-3.5 rounded-xl border transition-all cursor-pointer select-none hover:shadow-lg ${
+        isSelected
+          ? 'border-[#D4AF37] bg-[#162920] ring-1 ring-[#D4AF37] shadow-md'
+          : 'border-[#2D4A3D] hover:border-[#D4AF37]/60 bg-[#162920]'
       }`}
     >
       <div>
-        {/* Top Header Row: EVERYTHING TOGETHER AS REQUESTED (Category, Date, Actions) */}
-        <div className="flex items-center justify-between gap-1 mb-2">
-          <div className="flex items-center gap-1 min-w-0 flex-1">
-            {onSelect && (
+        {/* Top Header Row: Category, Date, Actions (Copy, Edit, Remove) */}
+        <div className="flex items-center justify-between gap-1 mb-2.5">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            {onSelect && (isSelectionActive || isSelected) && (
               <input
                 type="checkbox"
                 checked={isSelected}
@@ -283,57 +235,61 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   onSelect(note.id);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-3 h-3 rounded text-[#C5A059] focus:ring-[#C5A059]/20 cursor-pointer shrink-0"
+                className="w-3.5 h-3.5 rounded text-[#D4AF37] focus:ring-[#D4AF37]/20 cursor-pointer shrink-0 accent-[#D4AF37]"
               />
             )}
-            <div
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                isLockedActive ? 'bg-[#C5A059]' : colorConfig.dotClass
-              }`}
-            />
-            <span className="text-[9px] font-black text-[#8DA89B] uppercase tracking-tighter truncate max-w-[40px]">
-              {note.category || 'Uncat'}
+            <div className={`w-2 h-2 rounded-full shrink-0 ${colorConfig.dotClass}`} />
+            <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-wider truncate max-w-[70px]">
+              {note.category || 'General'}
             </span>
-            <span className="font-mono tabular-nums text-[8.5px] text-[#8DA89B]/80 shrink-0">
+            <span className="font-mono tabular-nums text-[9.5px] text-[#8DA89B] shrink-0">
               {formatDate(note.updatedAt || note.createdAt || note.rawDate)}
             </span>
           </div>
 
+          {/* EXACTLY 3 BUTTONS: Copy, Edit, Remove */}
           <div className="flex items-center gap-0.5 shrink-0">
-            <button type="button" onClick={handlePin} className="p-0.5 text-[#8DA89B] hover:text-[#C5A059] transition-colors">
-              <Pin className={`w-2.5 h-2.5 ${note.isPinned ? 'text-[#C5A059] fill-[#C5A059]' : ''}`} />
+            {/* 1. Copy */}
+            <button
+              type="button"
+              onClick={handleCopy}
+              title="Copy"
+              className="p-1 text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-md transition-colors cursor-pointer"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
-            <button type="button" onClick={handleCopy} className="p-0.5 text-[#8DA89B] hover:text-[#E0D6C5] transition-colors">
-              {copied ? <Check className="w-2.5 h-2.5 text-[#C5A059]" /> : <Copy className="w-2.5 h-2.5" />}
+
+            {/* 2. Edit */}
+            <button
+              type="button"
+              onClick={handleEdit}
+              title="Edit"
+              className="p-1 text-[#8DA89B] hover:text-[#D4AF37] hover:bg-[#244234] rounded-md transition-colors cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
             </button>
-            <button type="button" onClick={handleEdit} className="p-0.5 text-[#8DA89B] hover:text-[#C5A059] transition-colors">
-              <Edit3 className="w-2.5 h-2.5" />
-            </button>
-            <button type="button" onClick={handleDelete} className="p-0.5 text-[#8DA89B] hover:text-rose-600 transition-colors">
-              <Trash2 className="w-2.5 h-2.5" />
-            </button>
-            <button type="button" onClick={handleLockClick} className="p-0.5 text-[#8DA89B] hover:text-[#C5A059] transition-colors">
-              {note.isLocked && !isLockedActive ? <Unlock className="w-2.5 h-2.5" /> : <Lock className={`w-2.5 h-2.5 ${note.isLocked ? 'fill-[#C5A059]/20' : ''}`} />}
+
+            {/* 3. Remove */}
+            <button
+              type="button"
+              onClick={handleDelete}
+              title="Remove"
+              className="p-1 text-[#8DA89B] hover:text-rose-400 hover:bg-rose-950/40 rounded-md transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Title & 1st Line content */}
-        {isLockedActive ? (
-          <div className="py-1 flex flex-col items-center justify-center text-center">
-            <Lock className="w-3.5 h-3.5 text-[#C5A059] mb-1" />
-            <h3 className="font-bold text-[#E0D6C5] text-[11px]">Locked</h3>
-          </div>
-        ) : (
-          <div className="min-w-0">
-            <h3 className="font-bold text-[#E0D6C5] text-xs mb-0.5 truncate group-hover:text-[#C5A059] transition-colors">
-              {note.title}
-            </h3>
-            <p className="text-[10px] text-[#8DA89B] truncate font-normal">
-              {firstLine || 'No content'}
-            </p>
-          </div>
-        )}
+        {/* Note Title & Content preview */}
+        <div className="min-w-0">
+          <h3 className="font-bold text-[#F0F7F4] text-sm mb-1 truncate group-hover:text-[#D4AF37] transition-colors">
+            {note.title || 'Untitled Note'}
+          </h3>
+          <p className="text-xs text-[#8DA89B] line-clamp-2 leading-relaxed font-normal">
+            {firstLine || 'No content'}
+          </p>
+        </div>
       </div>
     </div>
   );

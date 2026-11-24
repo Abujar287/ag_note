@@ -26,9 +26,12 @@ import { Toast, ToastData } from './components/Toast';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { FloatingBatchBar } from './components/FloatingBatchBar';
 import { SettingsModal } from './components/SettingsModal';
+import { UpdateModal } from './components/UpdateModal';
+import { checkForGitHubUpdate, CURRENT_APP_VERSION } from './utils/updateManager';
 import { User } from 'firebase/auth';
 import { auth, initAuth, logout, googleSignIn } from './utils/auth';
 import { FIXED_APPS_SCRIPT_URL, isValidAppsScriptUrl } from './config/syncConfig';
+import initialNotesData from './data/importedNotes.json';
 
 const DEFAULT_CATEGORIES = ['General', 'Personal', 'Work', 'Bajar', 'Accounts', 'Links'];
 
@@ -103,7 +106,9 @@ export default function App() {
         if (Array.isArray(parsed)) return deduplicateNotes(parsed);
       }
     } catch { /* ignore */ }
-    return [];
+    const deletedIds = getDeletedNoteIds();
+    const initial = (initialNotesData as Note[]).filter((n) => n && n.id && !deletedIds.has(n.id));
+    return deduplicateNotes(initial);
   });
 
   const [trashNotes, setTrashNotes] = useState<Note[]>(() => {
@@ -170,6 +175,19 @@ export default function App() {
   }>({ isOpen: false, note: null, targetAction: 'view' });
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [updateModal, setUpdateModal] = useState<{
+    isOpen: boolean;
+    currentVersion: string;
+    newVersion: string;
+    apkUrl: string;
+    apkSize: number;
+  }>({
+    isOpen: false,
+    currentVersion: CURRENT_APP_VERSION,
+    newVersion: CURRENT_APP_VERSION,
+    apkUrl: '',
+    apkSize: 24.8 * 1024 * 1024,
+  });
 
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
@@ -196,7 +214,8 @@ export default function App() {
         isSettingsModalOpen || 
         passwordModal.isOpen || 
         deleteModal.isOpen || 
-        isBatchCategoryModalOpen;
+        isBatchCategoryModalOpen ||
+        updateModal.isOpen;
 
       if (hasOpenModal) {
         setIsNoteModalOpen(false);
@@ -206,6 +225,7 @@ export default function App() {
         setPasswordModal({ isOpen: false, note: null });
         setDeleteModal({ isOpen: false, onConfirm: () => {} });
         setIsBatchCategoryModalOpen(false);
+        setUpdateModal(prev => ({ ...prev, isOpen: false }));
         setIsSidebarOpen(false);
         
         window.history.pushState({ noBackExits: true }, '');
@@ -240,7 +260,7 @@ export default function App() {
   }, [
     isNoteModalOpen, viewingNote, isCategoryModalOpen, isSettingsModalOpen, 
     passwordModal.isOpen, deleteModal.isOpen, isBatchCategoryModalOpen, 
-    isTrashView, isSidebarOpen
+    isTrashView, isSidebarOpen, updateModal.isOpen
   ]);
 
   // Reset back press count after 3 seconds
@@ -711,6 +731,74 @@ export default function App() {
     }
   };
 
+  const handleLongPressNote = (id: string) => {
+    setSelectedNoteIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedNoteIds.length === 0) return;
+    const count = selectedNoteIds.length;
+    setDeleteModal({
+      isOpen: true,
+      count,
+      isPermanent: isTrashView,
+      onConfirm: () => {
+        if (isTrashView) {
+          setTrashNotes((prev) => prev.filter((n) => !selectedNoteIds.includes(n.id)));
+          showToast(`${count} notes permanently deleted`);
+        } else {
+          const toTrash = notes.filter((n) => selectedNoteIds.includes(n.id));
+          addDeletedNoteIds(selectedNoteIds);
+          setNotes((prev) => prev.filter((n) => !selectedNoteIds.includes(n.id)));
+          setTrashNotes((prev) => [
+            ...toTrash.map((n) => ({ ...n, deletedAt: new Date().toISOString() })),
+            ...prev,
+          ]);
+          showToast(`Moved ${count} notes to Trash`);
+        }
+        setSelectedNoteIds([]);
+      },
+    });
+  };
+
+  const handleBatchAssignCategory = (targetCategory: string) => {
+    if (selectedNoteIds.length === 0) return;
+    const count = selectedNoteIds.length;
+    setNotes((prev) =>
+      prev.map((n) =>
+        selectedNoteIds.includes(n.id)
+          ? { ...n, category: targetCategory, updatedAt: new Date().toISOString() }
+          : n
+      )
+    );
+    if (!categories.includes(targetCategory) && targetCategory !== 'Uncategorized') {
+      setCategories((prev) => [...prev, targetCategory]);
+    }
+    showToast(`Moved ${count} notes to "${targetCategory}"`);
+    setSelectedNoteIds([]);
+    setIsBatchCategoryModalOpen(false);
+  };
+
+  const handleCheckAppUpdate = async (forceTest = false) => {
+    showToast('Checking for GitHub updates...', 'info');
+    try {
+      const result = await checkForGitHubUpdate(forceTest);
+      if (result.updateAvailable) {
+        setUpdateModal({
+          isOpen: true,
+          currentVersion: result.currentVersion,
+          newVersion: result.newVersion,
+          apkUrl: result.apkUrl,
+          apkSize: result.apkSize,
+        });
+      } else {
+        showToast(`App is up to date (v${CURRENT_APP_VERSION})`, 'info');
+      }
+    } catch {
+      showToast('Could not check updates', 'error');
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#14241D] text-[#F0F7F4] flex flex-col">
       <Navbar
@@ -822,15 +910,12 @@ export default function App() {
                     note={note}
                     viewMode={viewMode}
                     isSelected={selectedNoteIds.includes(note.id)}
-                    isUnlocked={unlockedNoteIds.has(note.id)}
+                    isSelectionActive={selectedNoteIds.length > 0}
                     onSelect={(id) => setSelectedNoteIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
+                    onLongPress={handleLongPressNote}
                     onView={setViewingNote}
                     onEdit={(n) => { setEditingNote(n); setIsNoteModalOpen(true); }}
                     onDelete={requestDeleteNote}
-                    onTogglePin={handleTogglePin}
-                    onToggleLockNote={handleToggleLockNote}
-                    onUnlockRequest={handleUnlockRequest}
-                    onRelockNote={handleRelockNote}
                     onShowToast={showToast}
                   />
                 ))}
@@ -900,6 +985,19 @@ export default function App() {
         onClose={() => setIsCategoryModalOpen(false)}
       />
 
+      <BatchCategoryModal
+        isOpen={isBatchCategoryModalOpen}
+        selectedCount={selectedNoteIds.length}
+        categories={categories}
+        categoryCounts={categoryCounts}
+        onAssignCategory={handleBatchAssignCategory}
+        onCreateAndAssign={(newCat) => {
+          handleAddCategory(newCat);
+          handleBatchAssignCategory(newCat);
+        }}
+        onClose={() => setIsBatchCategoryModalOpen(false)}
+      />
+
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
@@ -908,15 +1006,37 @@ export default function App() {
         currentUser={currentUser}
         onLogin={handleLogin}
         onLogout={handleLogout}
+        onTriggerCheckUpdate={() => handleCheckAppUpdate()}
       />
 
-      <button
-        onClick={() => { setEditingNote(null); setIsNoteModalOpen(true); }}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#D4AF37] text-[#14241D] flex items-center justify-center shadow-2xl hover:bg-[#D4AF37]/95 hover:scale-105 active:scale-95 transition-all cursor-pointer z-30"
-        title="নতুন নোট লিখুন"
-      >
-        <Plus className="w-8 h-8 stroke-[2.5]" />
-      </button>
+      <UpdateModal
+        isOpen={updateModal.isOpen}
+        currentVersion={updateModal.currentVersion}
+        newVersion={updateModal.newVersion}
+        apkUrl={updateModal.apkUrl}
+        apkSize={updateModal.apkSize}
+        onClose={() => setUpdateModal((prev) => ({ ...prev, isOpen: false }))}
+        onShowToast={showToast}
+      />
+
+      {/* Floating Batch Bar (persistent when selection is active) */}
+      <FloatingBatchBar
+        selectedCount={selectedNoteIds.length}
+        onClear={() => setSelectedNoteIds([])}
+        onAssignCategory={() => setIsBatchCategoryModalOpen(true)}
+        onDelete={handleBatchDelete}
+      />
+
+      {/* New Note FAB - hidden while multi-select batch bar is active */}
+      {selectedNoteIds.length === 0 && (
+        <button
+          onClick={() => { setEditingNote(null); setIsNoteModalOpen(true); }}
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#D4AF37] text-[#14241D] flex items-center justify-center shadow-2xl hover:bg-[#D4AF37]/95 hover:scale-105 active:scale-95 transition-all cursor-pointer z-30"
+          title="নতুন নোট লিখুন"
+        >
+          <Plus className="w-8 h-8 stroke-[2.5]" />
+        </button>
+      )}
 
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
