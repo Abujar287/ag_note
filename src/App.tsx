@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Plus,
-  FolderOpen,
-  Pin,
-  Trash2,
-  CheckSquare,
-  Square,
-  HelpCircle,
-  Lock,
+  Search,
+  SlidersHorizontal,
+  Calendar,
+  ArrowUpDown,
   Folder,
   X,
 } from 'lucide-react';
 import { Note, NoteColor, SortMode, ViewMode, MASTER_PASSWORD } from './types/note';
 import { Navbar } from './components/Navbar';
-import { Sidebar } from './components/Sidebar';
 import { NoteCard } from './components/NoteCard';
 import { NoteModal } from './components/NoteModal';
 import { ViewNoteModal } from './components/ViewNoteModal';
@@ -136,6 +132,9 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortMode, setSortMode] = useState<SortMode>(() => (localStorage.getItem('smart_notepad_sort') as SortMode) || 'newest');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7days' | '30days' | 'this_month' | 'custom'>('all');
+  const [customDate, setCustomDate] = useState<string>('');
+  const [isOtherFiltersOpen, setIsOtherFiltersOpen] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem('smart_notepad_view') as ViewMode) || 'grid');
   const [isTrashView, setIsTrashView] = useState<boolean>(false);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
@@ -145,28 +144,13 @@ export default function App() {
 
   useEffect(() => {
     setDisplayLimit(60);
-  }, [activeCategory, searchQuery, activeColorFilter]);
+  }, [activeCategory, searchQuery, activeColorFilter, dateFilter, customDate, sortMode]);
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState<boolean>(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState<boolean>(false);
   const [isBatchCategoryModalOpen, setIsBatchCategoryModalOpen] = useState<boolean>(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('smart_notepad_sidebar_open');
-      if (saved !== null) return saved === 'true';
-      return window.innerWidth >= 768;
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('smart_notepad_sidebar_open', String(isSidebarOpen));
-    } catch { /* ignore */ }
-  }, [isSidebarOpen]);
 
   const [passwordModal, setPasswordModal] = useState<{
     isOpen: boolean;
@@ -226,7 +210,6 @@ export default function App() {
         setDeleteModal({ isOpen: false, onConfirm: () => {} });
         setIsBatchCategoryModalOpen(false);
         setUpdateModal(prev => ({ ...prev, isOpen: false }));
-        setIsSidebarOpen(false);
         
         window.history.pushState({ noBackExits: true }, '');
         setBackPressCount(0);
@@ -260,7 +243,7 @@ export default function App() {
   }, [
     isNoteModalOpen, viewingNote, isCategoryModalOpen, isSettingsModalOpen, 
     passwordModal.isOpen, deleteModal.isOpen, isBatchCategoryModalOpen, 
-    isTrashView, isSidebarOpen, updateModal.isOpen
+    isTrashView, updateModal.isOpen
   ]);
 
   // Reset back press count after 3 seconds
@@ -328,16 +311,41 @@ export default function App() {
   const lockedNotesCount = useMemo(() => notes.filter((n) => n.isLocked).length, [notes]);
 
   const filteredNotes = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+
     let result = notes.filter((note) => {
-      if (activeCategory === 'pinned') { if (!note.isPinned) return false; }
-      else if (activeCategory === 'uncategorized') { if (note.category && note.category.trim() !== '' && note.category.toLowerCase() !== 'uncategorized') return false; }
-      else if (activeCategory === 'locked') { if (!note.isLocked) return false; }
-      else if (activeCategory !== 'all') { if (note.category !== activeCategory) return false; }
+      if (activeCategory === 'uncategorized') {
+        if (note.category && note.category.trim() !== '' && note.category.toLowerCase() !== 'uncategorized') return false;
+      } else if (activeCategory !== 'all') {
+        if (note.category !== activeCategory) return false;
+      }
+
       if (activeColorFilter && note.color !== activeColorFilter) return false;
+
+      if (dateFilter !== 'all') {
+        const ts = parseNoteTimestamp(note);
+        if (!ts) return false;
+        if (dateFilter === 'today' && ts < startOfToday) return false;
+        if (dateFilter === '7days' && ts < sevenDaysAgo) return false;
+        if (dateFilter === '30days' && ts < thirtyDaysAgo) return false;
+        if (dateFilter === 'this_month') {
+          const d = new Date(ts);
+          if (d.getFullYear() !== now.getFullYear() || d.getMonth() !== now.getMonth()) return false;
+        }
+        if (dateFilter === 'custom' && customDate) {
+          const d = new Date(ts);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          if (`${yyyy}-${mm}-${dd}` !== customDate) return false;
+        }
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const isNoteUnlocked = unlockedNoteIds.has(note.id);
-        if (note.isLocked && !isNoteUnlocked) return 'locked'.includes(q);
         const matchesTitle = (note.title || '').toLowerCase().includes(q);
         const matchesContent = (note.content || '').toLowerCase().includes(q);
         if (!matchesTitle && !matchesContent) return false;
@@ -346,25 +354,29 @@ export default function App() {
     });
 
     result.sort((a, b) => {
-      if (a.isPinned !== b.isPinned) return b.isPinned ? 1 : -1;
-      // All notes always come in datetime DESC order (newest first)
-      if (activeCategory === 'all' || sortMode === 'newest' || sortMode === 'updated') {
-        const timeA = parseNoteTimestamp(a);
-        const timeB = parseNoteTimestamp(b);
-        if (timeA !== timeB) return timeB - timeA;
-        return (b.id || '').localeCompare(a.id || '');
-      }
       if (sortMode === 'oldest') {
         const timeA = parseNoteTimestamp(a);
         const timeB = parseNoteTimestamp(b);
         if (timeA !== timeB) return timeA - timeB;
         return (a.id || '').localeCompare(b.id || '');
       }
-      if (sortMode === 'title') return (a.title || '').localeCompare(b.title || '');
-      return parseNoteTimestamp(b) - parseNoteTimestamp(a);
+      if (sortMode === 'title') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      if (sortMode === 'updated') {
+        const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime() || parseNoteTimestamp(a);
+        const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime() || parseNoteTimestamp(b);
+        if (timeA !== timeB) return timeB - timeA;
+        return (b.id || '').localeCompare(a.id || '');
+      }
+      // newest first (default)
+      const timeA = parseNoteTimestamp(a);
+      const timeB = parseNoteTimestamp(b);
+      if (timeA !== timeB) return timeB - timeA;
+      return (b.id || '').localeCompare(a.id || '');
     });
     return result;
-  }, [notes, activeCategory, searchQuery, sortMode, unlockedNoteIds, activeColorFilter]);
+  }, [notes, activeCategory, searchQuery, sortMode, activeColorFilter, dateFilter, customDate]);
 
   // Listen for openSettings event from other components
   useEffect(() => {
@@ -802,54 +814,21 @@ export default function App() {
   return (
     <div className="min-h-screen w-full bg-[#14241D] text-[#F0F7F4] flex flex-col">
       <Navbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         viewMode={viewMode}
         onToggleViewMode={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
-        onOpenNewNote={() => { setEditingNote(null); setIsNoteModalOpen(true); }}
+        isTrashView={isTrashView}
+        trashNotesCount={trashNotes.length}
+        onToggleTrashView={setIsTrashView}
+        onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
         onExportNotes={handleExportNotes}
         onImportNotes={handleImportNotes}
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-        onToggleMobileMenu={() => setIsSidebarOpen(prev => !prev)}
-        unlockedCount={unlockedNoteIds.size}
-        onLockAll={handleLockAll}
-        activeColorFilter={activeColorFilter}
-        onColorFilterChange={setActiveColorFilter}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onSyncSheets={() => handleSyncToGoogleSheets()}
         isSyncingSheets={isSyncingSheets}
-        lastSyncTime={lastSyncTime}
+        onCheckUpdate={() => handleCheckAppUpdate()}
       />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-8 flex-1 w-full flex flex-col md:flex-row gap-4">
-        <Sidebar
-          categories={categories}
-          activeCategory={activeCategory}
-          isTrashView={isTrashView}
-          totalNotesCount={notes.length}
-          pinnedNotesCount={notes.filter(n => n.isPinned).length}
-          uncategorizedCount={uncategorizedCount}
-          lockedNotesCount={lockedNotesCount}
-          trashNotesCount={trashNotes.length}
-          categoryCounts={categoryCounts}
-          sortMode={sortMode}
-          onSelectCategory={(cat) => { setActiveCategory(cat); setSelectedNoteIds([]); }}
-          onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
-          onDeleteCategory={handleDeleteCategory}
-          onToggleTrashView={setIsTrashView}
-          onChangeSort={setSortMode}
-          onExportNotes={handleExportNotes}
-          onImportNotes={handleImportNotes}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          isMobileOpen={isSidebarOpen}
-          onCloseMobile={() => setIsSidebarOpen(false)}
-          onOpenSettings={() => setIsSettingsModalOpen(true)}
-        />
-
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-8 flex-1 w-full flex flex-col gap-4">
         <main className="flex-1 min-w-0">
           {isTrashView ? (
             <TrashView
@@ -864,41 +843,130 @@ export default function App() {
             />
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="text-lg font-bold">{activeCategory === 'all' ? 'All Notes' : activeCategory}</h2>
-                  {activeColorFilter && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[#162920] border border-[#2D4A3D] rounded-full text-xs">
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0 shadow-xs ring-1 ring-white/40"
-                        style={{
-                          backgroundColor:
-                            activeColorFilter === 'blue'
-                              ? '#3B82F6'
-                              : activeColorFilter === 'emerald'
-                              ? '#10B981'
-                              : activeColorFilter === 'amber'
-                              ? '#F59E0B'
-                              : activeColorFilter === 'rose'
-                              ? '#F43F5E'
-                              : activeColorFilter === 'purple'
-                              ? '#A855F7'
-                              : activeColorFilter === 'cyan'
-                              ? '#06B6D4'
-                              : '#64748B',
-                        }}
-                      />
-                      <span className="text-[#8DA89B] text-[11px] font-semibold">ফিল্টার চালু</span>
+              {/* Search & Expandable Filter Controls */}
+              <div className="bg-[#162920] border border-[#2D4A3D] rounded-2xl p-3 space-y-3 shadow-sm">
+                {/* Primary Row: Search bar, Category filter, Other filter button */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {/* Search bar */}
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-[#8DA89B] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search notes..."
+                      className="w-full pl-9 pr-8 py-2 bg-[#14241D] border border-[#2D4A3D] focus:border-[#D4AF37] rounded-xl text-xs sm:text-sm text-[#F0F7F4] placeholder-[#8DA89B]/60 focus:outline-none transition-colors"
+                    />
+                    {searchQuery && (
                       <button
                         type="button"
-                        onClick={() => setActiveColorFilter(null)}
-                        className="ml-0.5 text-[#8DA89B] hover:text-[#F0F7F4] cursor-pointer"
-                        title="রঙ ফিল্টার বন্ধ করুন"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8DA89B] hover:text-[#F0F7F4] p-0.5 cursor-pointer"
+                        title="Clear search"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-3.5 h-3.5" />
                       </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Category filter */}
+                    <div className="relative flex-1 sm:flex-initial">
+                      <Folder className="w-3.5 h-3.5 text-[#D4AF37] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <select
+                        value={activeCategory}
+                        onChange={(e) => {
+                          setActiveCategory(e.target.value);
+                          setSelectedNoteIds([]);
+                        }}
+                        aria-label="Category filter"
+                        className="w-full sm:w-44 pl-8 pr-3 py-2 bg-[#14241D] border border-[#2D4A3D] focus:border-[#D4AF37] rounded-xl text-xs font-bold text-[#F0F7F4] focus:outline-none cursor-pointer transition-colors"
+                      >
+                        <option value="all">All Categories ({notes.length})</option>
+                        <option value="uncategorized">Uncategorized ({uncategorizedCount})</option>
+                        {categories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat} ({categoryCounts[cat] || 0})
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  )}
+
+                    {/* Other filter button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsOtherFiltersOpen((prev) => !prev)}
+                      className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        isOtherFiltersOpen || sortMode !== 'newest' || dateFilter !== 'all'
+                          ? 'bg-[#D4AF37]/20 border-[#D4AF37]/60 text-[#D4AF37]'
+                          : 'bg-[#14241D] border-[#2D4A3D] text-[#8DA89B] hover:text-[#F0F7F4] hover:border-[#D4AF37]/40'
+                      }`}
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>Other filter</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expandable Row (Revealed when Other filter is clicked): Sort & Date filter */}
+                {isOtherFiltersOpen && (
+                  <div className="pt-2.5 border-t border-[#2D4A3D] grid grid-cols-1 sm:grid-cols-2 gap-2.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                    {/* 1. Sort */}
+                    <div className="flex items-center gap-2 bg-[#14241D] border border-[#2D4A3D] rounded-xl px-3 py-1.5">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+                      <span className="text-[11px] font-bold text-[#8DA89B] shrink-0">Sort:</span>
+                      <select
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value as SortMode)}
+                        aria-label="Sort notes"
+                        className="flex-1 bg-transparent text-xs font-bold text-[#F0F7F4] focus:outline-none cursor-pointer py-0.5"
+                      >
+                        <option value="newest" className="bg-[#162920]">Newest first</option>
+                        <option value="oldest" className="bg-[#162920]">Oldest first</option>
+                        <option value="updated" className="bg-[#162920]">Recently updated</option>
+                        <option value="title" className="bg-[#162920]">Title (A-Z)</option>
+                      </select>
+                    </div>
+
+                    {/* 2. Date filter */}
+                    <div className="flex items-center gap-2 bg-[#14241D] border border-[#2D4A3D] rounded-xl px-3 py-1.5 flex-wrap sm:flex-nowrap">
+                      <Calendar className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+                      <span className="text-[11px] font-bold text-[#8DA89B] shrink-0">Date:</span>
+                      <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value as any)}
+                        aria-label="Date filter"
+                        className="flex-1 bg-transparent text-xs font-bold text-[#F0F7F4] focus:outline-none cursor-pointer py-0.5 min-w-[100px]"
+                      >
+                        <option value="all" className="bg-[#162920]">All Dates</option>
+                        <option value="today" className="bg-[#162920]">Today</option>
+                        <option value="7days" className="bg-[#162920]">Last 7 Days</option>
+                        <option value="30days" className="bg-[#162920]">Last 30 Days</option>
+                        <option value="this_month" className="bg-[#162920]">This Month</option>
+                        <option value="custom" className="bg-[#162920]">Specific Date</option>
+                      </select>
+                      {dateFilter === 'custom' && (
+                        <input
+                          type="date"
+                          value={customDate}
+                          onChange={(e) => setCustomDate(e.target.value)}
+                          className="bg-[#162920] border border-[#2D4A3D] rounded-lg px-2 py-0.5 text-[11px] text-[#F0F7F4] focus:outline-none focus:border-[#D4AF37]"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-lg font-bold">
+                    {activeCategory === 'all'
+                      ? 'All Notes'
+                      : activeCategory === 'uncategorized'
+                      ? 'Uncategorized'
+                      : activeCategory}
+                  </h2>
                 </div>
                 <span className="text-xs text-[#8DA89B] font-semibold">{filteredNotes.length} notes</span>
               </div>

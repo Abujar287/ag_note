@@ -1,63 +1,63 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Download,
-  Upload,
+  MoreVertical,
+  RefreshCw,
+  Trash2,
+  FolderCog,
   LayoutGrid,
   List as ListIcon,
-  Menu,
-  Lock,
-  Plus,
-  FileSpreadsheet,
-  RefreshCw,
+  Download,
+  Upload,
+  Settings,
+  DownloadCloud,
+  Layers,
 } from 'lucide-react';
 import { ViewMode } from '../types/note';
-import { PWAInstallHeaderButton } from './PWAInstallBanner';
-import { SearchWithColorFilter } from './SearchWithColorFilter';
 
 interface NavbarProps {
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
   viewMode: ViewMode;
   onToggleViewMode: () => void;
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
-  onOpenNewNote?: () => void;
+  isTrashView: boolean;
+  trashNotesCount: number;
+  onToggleTrashView: (showTrash: boolean) => void;
+  onOpenCategoryModal: () => void;
   onExportNotes: () => void;
   onImportNotes: (file: File) => void;
-  onToggleMobileMenu?: () => void;
-  isSidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
-  unlockedCount?: number;
-  onLockAll?: () => void;
-  activeColorFilter: string | null;
-  onColorFilterChange: (color: string | null) => void;
-  onOpenSettings?: () => void;
+  onOpenSettings: () => void;
   onSyncSheets?: () => void;
   isSyncingSheets?: boolean;
-  lastSyncTime?: string;
+  onCheckUpdate: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  searchQuery,
-  onSearchChange,
   viewMode,
   onToggleViewMode,
-  onOpenNewNote,
+  isTrashView,
+  trashNotesCount,
+  onToggleTrashView,
+  onOpenCategoryModal,
   onExportNotes,
   onImportNotes,
-  onToggleMobileMenu,
-  isSidebarOpen = true,
-  onToggleSidebar,
-  unlockedCount = 0,
-  onLockAll,
-  activeColorFilter,
-  onColorFilterChange,
   onOpenSettings,
   onSyncSheets,
   isSyncingSheets,
-  lastSyncTime,
+  onCheckUpdate,
 }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -67,142 +67,146 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const handleToggleMenu = () => {
-    if (onToggleSidebar) onToggleSidebar();
-    else if (onToggleMobileMenu) onToggleMobileMenu();
-  };
-
   return (
     <header className="sticky top-0 z-40 w-full bg-[#162920]/95 backdrop-blur-md border-b border-[#2D4A3D] shadow-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-4">
-        {/* Main Header Bar */}
-        <div className="h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
-          {/* Left: Menu Toggle for ALL Screens, AG Logo & App Title */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Sidebar Toggle for ALL Screens (Desktop, Tablet & Mobile) */}
-            <button
-              type="button"
-              onClick={handleToggleMenu}
-              className={`p-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center ${
-                isSidebarOpen
-                  ? 'text-[#D4AF37] bg-[#244234] hover:bg-[#2d5240] ring-1 ring-[#D4AF37]/30'
-                  : 'text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234]'
-              }`}
-              title={isSidebarOpen ? "মেনু লুকান (Hide Menu)" : "মেনু দেখান (Show Menu)"}
-              aria-label={isSidebarOpen ? "Hide Menu" : "Show Menu"}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+        <div className="h-14 sm:h-16 flex items-center justify-between gap-3">
+          {/* Left: 1. 3-dot menu, 2. App logo, 3. App name */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* 1. 3-dot menu */}
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+                className="p-2 rounded-xl text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] transition-colors cursor-pointer flex items-center justify-center"
+                title="Menu"
+                aria-label="Open menu"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
 
-            {/* Logo Badge */}
-            <div
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#D4AF37] text-[#14241D] font-black text-sm sm:text-base flex items-center justify-center select-none shadow-md"
-            >
-              AG
-            </div>
-
-            {/* Brand Title & Last Sync / Sync Button */}
-            <div className="flex flex-col">
-              <span className="text-sm sm:text-base font-black tracking-tight text-[#F0F7F4] uppercase select-none">
-                AG NOTEPAD
-              </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] sm:text-xs text-[#8DA89B] font-mono select-none">
-                  {lastSyncTime || '27-Oct-2026 11:35PM'}
-                </span>
-                {onSyncSheets && (
+              {isMenuOpen && (
+                <div className="absolute left-0 top-full mt-2 w-56 bg-[#162920] border border-[#2D4A3D] rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <button
                     type="button"
-                    onClick={onSyncSheets}
-                    disabled={isSyncingSheets}
-                    title="Google Sheets এ সিঙ্ক করুন"
-                    className="p-1 px-1.5 bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 text-[#D4AF37] rounded-md border border-[#D4AF37]/40 transition-colors flex items-center gap-1 text-[10px] font-bold cursor-pointer disabled:opacity-50 select-none shadow-xs"
+                    onClick={() => {
+                      onToggleTrashView(false);
+                      setIsMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      !isTrashView
+                        ? 'text-[#D4AF37] bg-[#244234]/60'
+                        : 'text-[#F0F7F4] hover:bg-[#244234]'
+                    }`}
                   >
-                    <RefreshCw className={`w-3 h-3 text-[#10B981] ${isSyncingSheets ? 'animate-spin' : ''}`} />
-                    <span>Sync</span>
+                    <span className="flex items-center gap-2.5">
+                      <Layers className="w-4 h-4 text-[#10B981]" />
+                      <span>All Notes</span>
+                    </span>
                   </button>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {/* Center: Search & Direct Color Filter (Desktop/Tablet) */}
-          <div className="hidden sm:flex flex-1 max-w-md items-center mx-2">
-            <SearchWithColorFilter
-              searchQuery={searchQuery}
-              onSearchChange={onSearchChange}
-              activeColor={activeColorFilter}
-              onColorChange={onColorFilterChange}
-              isMobile={false}
-            />
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleTrashView(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      isTrashView
+                        ? 'text-rose-300 bg-rose-950/50'
+                        : 'text-[#F0F7F4] hover:bg-[#244234]'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Trash2 className="w-4 h-4 text-rose-400" />
+                      <span>Trash Bin</span>
+                    </span>
+                    <span className="text-[10px] font-mono bg-[#14241D] px-1.5 py-0.5 rounded border border-[#2D4A3D] text-[#8DA89B]">
+                      {trashNotesCount}
+                    </span>
+                  </button>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Quick New Note Button (Desktop) */}
-            {onOpenNewNote && (
-              <button
-                type="button"
-                onClick={onOpenNewNote}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#14241D] rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-md"
-              >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>New Note</span>
-              </button>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenCategoryModal();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#F0F7F4] hover:bg-[#244234] transition-colors cursor-pointer"
+                  >
+                    <FolderCog className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Manage Categories</span>
+                  </button>
 
-            {/* Lock All button if any notes are unlocked */}
-            {unlockedCount > 0 && onLockAll && (
-              <button
-                type="button"
-                onClick={onLockAll}
-                title={`Lock ${unlockedCount} unlocked note${unlockedCount > 1 ? 's' : ''}`}
-                className="px-2.5 py-1.5 text-xs font-semibold text-[#D4AF37] bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 rounded-xl border border-[#D4AF37]/40 transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Lock All</span>
-                <span className="text-[10px] bg-[#D4AF37]/30 px-1.5 py-0.2 rounded-full font-mono">
-                  {unlockedCount}
-                </span>
-              </button>
-            )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleViewMode();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#F0F7F4] hover:bg-[#244234] transition-colors cursor-pointer"
+                  >
+                    {viewMode === 'grid' ? (
+                      <ListIcon className="w-4 h-4 text-[#8DA89B]" />
+                    ) : (
+                      <LayoutGrid className="w-4 h-4 text-[#8DA89B]" />
+                    )}
+                    <span>{viewMode === 'grid' ? 'List View' : 'Grid View'}</span>
+                  </button>
 
-            {/* View Mode Toggle */}
-            <button
-              type="button"
-              onClick={onToggleViewMode}
-              title={viewMode === 'grid' ? 'Switch to List View' : 'Switch to Grid View'}
-              className="p-2 text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-xl border border-[#2D4A3D] transition-colors cursor-pointer"
-            >
-              {viewMode === 'grid' ? (
-                <ListIcon className="w-4 h-4" />
-              ) : (
-                <LayoutGrid className="w-4 h-4" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onExportNotes();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#F0F7F4] hover:bg-[#244234] transition-colors cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Export Backup</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#F0F7F4] hover:bg-[#244234] transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-[#10B981]" />
+                    <span>Restore Backup</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenSettings();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#F0F7F4] hover:bg-[#244234] transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 text-[#8DA89B]" />
+                    <span>Settings</span>
+                  </button>
+
+                  <div className="my-1.5 border-t border-[#2D4A3D]" />
+
+                  {/* Check Update at the VERY BOTTOM of the 3-dot menu */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onCheckUpdate();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#D4AF37] hover:bg-[#244234] transition-colors cursor-pointer"
+                  >
+                    <DownloadCloud className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Check Update</span>
+                  </button>
+                </div>
               )}
-            </button>
 
-
-
-            {/* Backup Button (Desktop/Tablet) */}
-            <button
-              type="button"
-              onClick={onExportNotes}
-              title="Download JSON Backup"
-              className="hidden md:flex p-2 text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-xl border border-[#2D4A3D] transition-colors items-center gap-1.5 text-xs font-bold cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-[#D4AF37]" />
-              <span className="hidden lg:inline">Backup</span>
-            </button>
-
-            {/* Restore Button (Desktop/Tablet) */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              title="Import JSON Backup file"
-              className="hidden md:flex p-2 text-[#8DA89B] hover:text-[#F0F7F4] hover:bg-[#244234] rounded-xl border border-[#2D4A3D] transition-colors items-center gap-1.5 text-xs font-bold cursor-pointer"
-            >
-              <Upload className="w-4 h-4 text-[#10B981]" />
-              <span className="hidden lg:inline">Restore</span>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -210,22 +214,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onChange={handleFileChange}
                 className="hidden"
               />
-            </button>
+            </div>
 
-            {/* PWA Install Button (shows if not yet installed) */}
-            <PWAInstallHeaderButton />
+            {/* 2. App logo */}
+            <div className="w-9 h-9 rounded-full bg-[#D4AF37] text-[#14241D] font-black text-sm flex items-center justify-center select-none shadow-md shrink-0">
+              AG
+            </div>
+
+            {/* 3. App name */}
+            <span className="text-sm sm:text-base font-black tracking-tight text-[#F0F7F4] uppercase select-none truncate">
+              AG NOTEPAD
+            </span>
           </div>
-        </div>
 
-        {/* Mobile Search & Color Filter Row */}
-        <div className="pb-2.5 sm:hidden">
-          <SearchWithColorFilter
-            searchQuery={searchQuery}
-            onSearchChange={onSearchChange}
-            activeColor={activeColorFilter}
-            onColorChange={onColorFilterChange}
-            isMobile={true}
-          />
+          {/* Right: 4. Sync button */}
+          {onSyncSheets && (
+            <button
+              type="button"
+              onClick={onSyncSheets}
+              disabled={isSyncingSheets}
+              title="Sync"
+              className="px-3 py-1.5 bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 text-[#D4AF37] rounded-xl border border-[#D4AF37]/40 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer disabled:opacity-50 select-none shadow-xs shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#10B981] ${isSyncingSheets ? 'animate-spin' : ''}`} />
+              <span>Sync</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
