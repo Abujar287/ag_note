@@ -24,7 +24,7 @@ import { FloatingBatchBar } from './components/FloatingBatchBar';
 import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { UpdateModal } from './components/UpdateModal';
-import { checkForGitHubUpdate, CURRENT_APP_VERSION } from './utils/updateManager';
+import { checkForGitHubUpdate, getInstalledAppVersion } from './utils/updateManager';
 import { FIXED_APPS_SCRIPT_URL, isValidAppsScriptUrl } from './config/syncConfig';
 
 const COLOR_SWATCHES: { id: NoteColor; hex: string }[] = [
@@ -182,10 +182,10 @@ export default function App() {
     apkSize: number;
   }>({
     isOpen: false,
-    currentVersion: CURRENT_APP_VERSION,
-    newVersion: CURRENT_APP_VERSION,
+    currentVersion: getInstalledAppVersion(),
+    newVersion: getInstalledAppVersion(),
     apkUrl: '',
-    apkSize: 24.8 * 1024 * 1024,
+    apkSize: 0,
   });
 
   const [deleteModal, setDeleteModal] = useState<{
@@ -401,10 +401,19 @@ export default function App() {
 
   const handleExportNotes = () => {
     try {
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(notes, null, 2));
+      const jsonText = JSON.stringify(notes, null, 2);
+      const filename = `ag_notepad_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      if ((window as any).Android?.saveTextFile) {
+        const saved = (window as any).Android.saveTextFile(filename, jsonText);
+        if (saved) {
+          showToast(`Saved to Download/${filename}`);
+          return;
+        }
+      }
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(jsonText);
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', `ag_notepad_backup_${new Date().toISOString().slice(0, 10)}.json`);
+      downloadAnchor.setAttribute('download', filename);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
@@ -728,8 +737,12 @@ export default function App() {
           apkUrl: result.apkUrl,
           apkSize: result.apkSize,
         });
+      } else if (result.apkMissing) {
+        showToast(`Release v${result.newVersion} has no APK attached yet`, 'error');
+      } else if (result.releaseMissing) {
+        showToast('No GitHub Release APK published yet — push changes to GitHub to build it', 'info');
       } else {
-        showToast(`App is up to date (v${CURRENT_APP_VERSION})`, 'info');
+        showToast(`App is up to date (v${result.currentVersion})`, 'info');
       }
     } catch {
       showToast('Could not check updates', 'error');

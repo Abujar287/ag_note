@@ -1,11 +1,25 @@
-// Update Manager for AG Notepad
-// Handles checking GitHub releases and downloading update APK
+// Update Manager for AG Notepad / Notedpad
+// Handles checking GitHub releases and downloading real APK files
 
 export const CURRENT_APP_VERSION = '1.2.0';
 export const GITHUB_REPO = 'Abujar287/ag_note';
 
+export function getInstalledAppVersion(): string {
+  try {
+    const androidVer = (window as any).Android?.getAppVersion?.();
+    if (typeof androidVer === 'string' && androidVer.trim()) {
+      return androidVer.trim();
+    }
+  } catch {
+    // ignore
+  }
+  return CURRENT_APP_VERSION;
+}
+
 export interface UpdateInfo {
   updateAvailable: boolean;
+  apkMissing?: boolean;
+  releaseMissing?: boolean;
   currentVersion: string;
   newVersion: string;
   apkUrl: string;
@@ -29,10 +43,9 @@ export function isNewerVersion(remoteVer: string, currentVer: string): boolean {
   return false;
 }
 
-// Check GitHub for latest release
+// Check GitHub for latest release with an actual .apk asset attached
 export async function checkForGitHubUpdate(forceCheckNewer = false): Promise<UpdateInfo> {
-  const defaultApkUrl = `https://github.com/${GITHUB_REPO}/releases/download/v1.2.1/AG_Notepad_v1.2.1.apk`;
-  const defaultApkSize = 24.8 * 1024 * 1024; // 24.8 MB
+  const currentVersion = getInstalledAppVersion();
 
   try {
     const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
@@ -41,68 +54,87 @@ export async function checkForGitHubUpdate(forceCheckNewer = false): Promise<Upd
       },
     });
 
+    if (response.status === 404) {
+      return {
+        updateAvailable: false,
+        releaseMissing: true,
+        currentVersion,
+        newVersion: currentVersion,
+        apkUrl: '',
+        apkSize: 0,
+      };
+    }
+
     if (response.ok) {
       const data = await response.json();
       const tagName = data.tag_name || '';
-      const remoteVersion = tagName.replace(/^v/, '');
+      const remoteVersion = tagName.replace(/^v/, '').trim();
 
-      const apkAsset = data.assets?.find((a: any) =>
-        a.name && a.name.toLowerCase().endsWith('.apk')
+      const apkAsset = data.assets?.find(
+        (a: any) => a.name && a.name.toLowerCase().endsWith('.apk') && a.browser_download_url
       );
 
-      const apkUrl = apkAsset ? apkAsset.browser_download_url : defaultApkUrl;
-      const apkSize = apkAsset?.size || defaultApkSize;
+      const hasNewerVersion = remoteVersion
+        ? isNewerVersion(remoteVersion, currentVersion)
+        : false;
 
-      const hasUpdate = isNewerVersion(remoteVersion, CURRENT_APP_VERSION);
+      if ((hasNewerVersion || forceCheckNewer) && !apkAsset) {
+        return {
+          updateAvailable: false,
+          apkMissing: true,
+          currentVersion,
+          newVersion: remoteVersion || currentVersion,
+          apkUrl: '',
+          apkSize: 0,
+        };
+      }
+
+      if ((hasNewerVersion || forceCheckNewer) && apkAsset) {
+        return {
+          updateAvailable: true,
+          currentVersion,
+          newVersion: remoteVersion || currentVersion,
+          apkUrl: apkAsset.browser_download_url,
+          apkSize: apkAsset.size || 0,
+        };
+      }
 
       return {
-        updateAvailable: hasUpdate,
-        currentVersion: CURRENT_APP_VERSION,
-        newVersion: remoteVersion || '1.2.1',
-        apkUrl,
-        apkSize,
+        updateAvailable: false,
+        currentVersion,
+        newVersion: remoteVersion || currentVersion,
+        apkUrl: apkAsset?.browser_download_url || '',
+        apkSize: apkAsset?.size || 0,
       };
     }
   } catch (err) {
     console.warn('[UpdateManager] Could not reach GitHub releases:', err);
   }
 
-  // If GitHub has no releases published yet, or error occurred:
-  // When forceCheckNewer is true (e.g. testing update feature), provide v1.2.1 update
-  if (forceCheckNewer) {
-    return {
-      updateAvailable: true,
-      currentVersion: CURRENT_APP_VERSION,
-      newVersion: '1.2.1',
-      apkUrl: defaultApkUrl,
-      apkSize: defaultApkSize,
-    };
-  }
-
   return {
     updateAvailable: false,
-    currentVersion: CURRENT_APP_VERSION,
-    newVersion: CURRENT_APP_VERSION,
-    apkUrl: defaultApkUrl,
-    apkSize: defaultApkSize,
+    currentVersion,
+    newVersion: currentVersion,
+    apkUrl: '',
+    apkSize: 0,
   };
 }
 
 // Trigger installation of APK
-export function triggerApkInstall(apkBlobOrUrl: Blob | string, filename = 'AG_Notepad.apk') {
+export function triggerApkInstall(apkBlobOrUrl: Blob | string, filename = 'Notedpad.apk') {
   try {
-    // 1. If running inside Android WebView native wrapper with JavascriptInterface
+    // 1. Inside Android WebView native wrapper with JavascriptInterface
     if ((window as any).Android && typeof (window as any).Android.installApk === 'function') {
       (window as any).Android.installApk(filename);
       return;
     }
 
-    // 2. Browser / PWA environment:
+    // 2. Browser / PWA environment: trigger direct APK download
+    if (!apkBlobOrUrl) return;
     const url = typeof apkBlobOrUrl === 'string' ? apkBlobOrUrl : URL.createObjectURL(apkBlobOrUrl);
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = filename;
-    anchor.setAttribute('target', '_blank');
     anchor.setAttribute('rel', 'noopener noreferrer');
     document.body.appendChild(anchor);
     anchor.click();

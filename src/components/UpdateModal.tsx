@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { triggerApkInstall } from '../utils/updateManager';
 
 interface UpdateModalProps {
@@ -23,9 +23,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadedBytes, setDownloadedBytes] = useState(0);
+  const [totalBytesState, setTotalBytesState] = useState(apkSize || 0);
   const [isComplete, setIsComplete] = useState(false);
   const [downloadedBlobUrl, setDownloadedBlobUrl] = useState<string | null>(null);
-  const progressIntervalRef = useRef<any>(null);
+
+  useEffect(() => {
+    setTotalBytesState(apkSize || 0);
+  }, [apkSize]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -33,104 +37,103 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
       setDownloadProgress(0);
       setDownloadedBytes(0);
       setIsComplete(false);
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
+      if (downloadedBlobUrl) {
+        URL.revokeObjectURL(downloadedBlobUrl);
+        setDownloadedBlobUrl(null);
       }
+      delete (window as any).__onApkProgress;
+      delete (window as any).__onApkComplete;
+      delete (window as any).__onApkError;
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const totalBytes = apkSize || 24.8 * 1024 * 1024;
-  const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+  const totalBytes = totalBytesState || apkSize || 0;
+  const totalMB = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '--';
   const downloadedMB = (downloadedBytes / (1024 * 1024)).toFixed(1);
-  const filename = `AG_Notepad_v${newVersion}.apk`;
+  const filename = `Notedpad_v${newVersion}.apk`;
 
   const handleStartDownload = async () => {
+    if (!apkUrl) {
+      onShowToast('APK download link missing in release.', 'error');
+      return;
+    }
+
     setIsDownloading(true);
     setDownloadProgress(0);
     setDownloadedBytes(0);
     setIsComplete(false);
 
+    // Native Android wrapper bridge (direct MediaStore.Downloads + FileProvider installer)
+    if ((window as any).Android && typeof (window as any).Android.downloadApk === 'function') {
+      (window as any).__onApkProgress = (pct: number, received: number, total: number) => {
+        setDownloadProgress(pct);
+        setDownloadedBytes(received);
+        if (total > 0) setTotalBytesState(total);
+      };
+      (window as any).__onApkComplete = (savedName: string) => {
+        setDownloadProgress(100);
+        if (totalBytes > 0) setDownloadedBytes(totalBytes);
+        setIsComplete(true);
+        onShowToast(`Saved to Download/${savedName}`, 'success');
+      };
+      (window as any).__onApkError = (errMsg: string) => {
+        setIsDownloading(false);
+        setIsComplete(false);
+        onShowToast(errMsg || 'APK download failed.', 'error');
+      };
+
+      (window as any).Android.downloadApk(apkUrl, filename);
+      return;
+    }
+
+    // Web / PWA fallback: stream real APK or hand off direct download to browser
     try {
-      // Check if Android Native Bridge exists
-      if ((window as any).Android && typeof (window as any).Android.downloadApk === 'function') {
-        (window as any).Android.downloadApk(apkUrl, filename);
+      const response = await fetch(apkUrl, { mode: 'cors' });
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      // Try streaming the download or realistic live progress to route to public download folder
-      let received = 0;
+      const contentLength = +(response.headers.get('Content-Length') || totalBytes || 0);
+      if (contentLength > 0) setTotalBytesState(contentLength);
+
+      const reader = response.body.getReader();
       const chunks: BlobPart[] = [];
+      let received = 0;
 
-      try {
-        const response = await fetch(apkUrl, { mode: 'cors' });
-        if (response.ok && response.body) {
-          const reader = response.body.getReader();
-          const contentLength = +(response.headers.get('Content-Length') || totalBytes);
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) {
-              chunks.push(value);
-              received += value.length;
-              setDownloadedBytes(received);
-              setDownloadProgress(Math.min(99, Math.round((received / contentLength) * 100)));
-            }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          received += value.length;
+          setDownloadedBytes(received);
+          if (contentLength > 0) {
+            setDownloadProgress(Math.min(99, Math.round((received / contentLength) * 100)));
           }
-        } else {
-          throw new Error('Fallback to simulated stream');
         }
-      } catch {
-        // Smooth realistic download progress simulation for public APK download
-        const stepTime = 120; // 120ms per tick
-        const totalSteps = 25;
-        let currentStep = 0;
-
-        await new Promise<void>((resolve) => {
-          progressIntervalRef.current = setInterval(() => {
-            currentStep++;
-            const pct = Math.min(100, Math.round((currentStep / totalSteps) * 100));
-            const currentBytes = Math.round((pct / 100) * totalBytes);
-            setDownloadProgress(pct);
-            setDownloadedBytes(currentBytes);
-
-            if (currentStep >= totalSteps) {
-              clearInterval(progressIntervalRef.current);
-              resolve();
-            }
-          }, stepTime);
-        });
       }
 
-      // 100% Download Completed
+      if (chunks.length === 0) {
+        throw new Error('Empty APK file');
+      }
+
       setDownloadProgress(100);
-      setDownloadedBytes(totalBytes);
       setIsComplete(true);
 
-      // Create APK Blob and route directly to Public Download folder (/storage/emulated/0/Download)
-      const blob =
-        chunks.length > 0
-          ? new Blob(chunks, { type: 'application/vnd.android.package-archive' })
-          : new Blob(['AG_NOTEPAD_APK_PACKAGE'], {
-              type: 'application/vnd.android.package-archive',
-            });
-
+      const blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
       const blobUrl = URL.createObjectURL(blob);
       setDownloadedBlobUrl(blobUrl);
 
-      // Save APK directly to public download folder
       triggerApkInstall(blobUrl, filename);
-      onShowToast(`APK saved to public Download folder: ${filename}`, 'success');
-
-      // Automatically launch Android package installer
-      setTimeout(() => {
-        triggerApkInstall(blobUrl, filename);
-      }, 500);
-    } catch (err: any) {
-      console.error('Download error:', err);
-      onShowToast('Download failed. Please check network connection.', 'error');
-      setIsDownloading(false);
+      onShowToast(`APK downloaded: ${filename}`, 'success');
+    } catch {
+      // If GitHub release redirect blocks fetch CORS in browser, trigger direct browser download
+      triggerApkInstall(apkUrl, filename);
+      setDownloadProgress(100);
+      setIsComplete(true);
+      onShowToast('Downloading APK via browser...', 'info');
     }
   };
 
@@ -144,41 +147,41 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={!isDownloading ? onClose : undefined}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
+      onClick={!isDownloading || isComplete ? onClose : undefined}
     >
       <div
-        className="w-full max-w-sm bg-[#162920] rounded-2xl shadow-2xl border border-[#2D4A3D] p-5 sm:p-6 space-y-4 animate-in zoom-in-95 duration-150 text-[#F0F7F4]"
+        className="w-full max-w-sm bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border)] p-5 sm:p-6 space-y-4 animate-in zoom-in-95 duration-150 text-[var(--text-primary)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Title: Update Available Now */}
-        <h3 className="text-base font-bold text-[#F0F7F4] text-center">
+        <h3 className="text-base font-bold text-[var(--text-primary)] text-center">
           Update Available Now
         </h3>
 
         {/* Current Version & New Version ONLY */}
         <div className="space-y-1.5 py-1 text-xs sm:text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[#8DA89B]">Current Version:</span>
-            <span className="font-mono font-bold text-[#F0F7F4]">{currentVersion}</span>
+            <span className="text-[var(--text-muted)]">Current Version:</span>
+            <span className="font-mono font-bold text-[var(--text-primary)]">{currentVersion}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[#8DA89B]">New Version:</span>
-            <span className="font-mono font-bold text-[#D4AF37]">{newVersion}</span>
+            <span className="text-[var(--text-muted)]">New Version:</span>
+            <span className="font-mono font-bold text-[var(--accent-gold)]">{newVersion}</span>
           </div>
         </div>
 
         {/* Live Progress Bar & Size (when downloading) */}
         {isDownloading && (
           <div className="space-y-2 pt-1 animate-in fade-in duration-200">
-            <div className="w-full h-2.5 bg-[#14241D] rounded-full overflow-hidden border border-[#2D4A3D]">
+            <div className="w-full h-2.5 bg-[var(--bg-elevated)] rounded-full overflow-hidden border border-[var(--border)]">
               <div
-                className="h-full bg-[#D4AF37] transition-all duration-150 ease-out rounded-full"
+                className="h-full bg-[var(--accent-gold)] transition-all duration-150 ease-out rounded-full"
                 style={{ width: `${downloadProgress}%` }}
               />
             </div>
-            <div className="flex justify-between items-center text-xs font-mono text-[#8DA89B]">
-              <span className="text-[#D4AF37] font-bold">{downloadProgress}%</span>
+            <div className="flex justify-between items-center text-xs font-mono text-[var(--text-muted)]">
+              <span className="text-[var(--accent-gold)] font-bold">{downloadProgress}%</span>
               <span>
                 {downloadedMB} MB / {totalMB} MB
               </span>
@@ -186,20 +189,20 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
           </div>
         )}
 
-        {/* Action Buttons: Cancel and Download (or Open / Close once completed) */}
+        {/* Action Buttons: Cancel and Download (or Close / Open once completed) */}
         {!isDownloading ? (
           <div className="flex items-center gap-2.5 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-4 bg-[#14241D] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#8DA89B] hover:text-[#F0F7F4] rounded-xl text-xs font-bold transition-all cursor-pointer"
+              className="flex-1 py-2.5 px-4 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleStartDownload}
-              className="flex-1 py-2.5 px-4 bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#14241D] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
+              className="flex-1 py-2.5 px-4 bg-[var(--accent-gold)] text-[#14241D] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
             >
               Download
             </button>
@@ -209,14 +212,14 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 px-4 bg-[#14241D] hover:bg-[#1f3b2d] border border-[#2D4A3D] text-[#8DA89B] hover:text-[#F0F7F4] rounded-xl text-xs font-bold transition-all cursor-pointer"
+              className="flex-1 py-2.5 px-4 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
               Close
             </button>
             <button
               type="button"
               onClick={handleOpenInstaller}
-              className="flex-1 py-2.5 px-4 bg-[#10B981] hover:bg-[#10B981]/90 text-[#14241D] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
+              className="flex-1 py-2.5 px-4 bg-[#10B981] text-[#14241D] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
             >
               Open
             </button>
