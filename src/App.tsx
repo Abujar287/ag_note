@@ -9,9 +9,10 @@ import {
   Palette,
   Check,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { Note, NoteColor, SortMode, ViewMode } from './types/note';
-import { Navbar } from './components/Navbar';
+import { Navbar, ColorThemeId, APP_THEMES } from './components/Navbar';
 import { NoteCard } from './components/NoteCard';
 import { NoteModal } from './components/NoteModal';
 import { ViewNoteModal } from './components/ViewNoteModal';
@@ -24,6 +25,7 @@ import { FloatingBatchBar } from './components/FloatingBatchBar';
 import { SettingsModal } from './components/SettingsModal';
 import { StatsModal } from './components/StatsModal';
 import { UpdateModal } from './components/UpdateModal';
+import { ThemeModal } from './components/ThemeModal';
 import { checkForGitHubUpdate, getInstalledAppVersion } from './utils/updateManager';
 import { FIXED_APPS_SCRIPT_URL, isValidAppsScriptUrl } from './config/syncConfig';
 
@@ -137,7 +139,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortMode, setSortMode] = useState<SortMode>(() => (localStorage.getItem('smart_notepad_sort') as SortMode) || 'newest');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7days' | '30days' | 'this_month' | 'custom'>('all');
-  const [customDate, setCustomDate] = useState<string>('');
+  const [customDateFrom, setCustomDateFrom] = useState<string>('');
+  const [customDateTo, setCustomDateTo] = useState<string>('');
   const [isOtherFiltersOpen, setIsOtherFiltersOpen] = useState<boolean>(false);
   const [isColorPopoverOpen, setIsColorPopoverOpen] = useState<boolean>(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState<boolean>(false);
@@ -151,7 +154,7 @@ export default function App() {
 
   useEffect(() => {
     setDisplayLimit(60);
-  }, [activeCategory, searchQuery, activeColorFilter, dateFilter, customDate, sortMode]);
+  }, [activeCategory, searchQuery, activeColorFilter, dateFilter, customDateFrom, customDateTo, sortMode]);
 
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
@@ -174,6 +177,7 @@ export default function App() {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
   const [updateModal, setUpdateModal] = useState<{
     isOpen: boolean;
     currentVersion: string;
@@ -211,6 +215,7 @@ export default function App() {
         !!viewingNote || 
         isCategoryModalOpen || 
         isSettingsModalOpen || 
+        isThemeModalOpen ||
         isStatsModalOpen || 
         deleteModal.isOpen || 
         isBatchCategoryModalOpen ||
@@ -221,6 +226,7 @@ export default function App() {
         setViewingNote(null);
         setIsCategoryModalOpen(false);
         setIsSettingsModalOpen(false);
+        setIsThemeModalOpen(false);
         setIsStatsModalOpen(false);
         setDeleteModal({ isOpen: false, onConfirm: () => {} });
         setIsBatchCategoryModalOpen(false);
@@ -257,7 +263,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [
     isNoteModalOpen, viewingNote, isCategoryModalOpen, isSettingsModalOpen, 
-    isStatsModalOpen, deleteModal.isOpen, isBatchCategoryModalOpen, 
+    isThemeModalOpen, isStatsModalOpen, deleteModal.isOpen, isBatchCategoryModalOpen, 
     isTrashView, updateModal.isOpen
   ]);
 
@@ -285,6 +291,14 @@ export default function App() {
     } catch { return true; }
   });
 
+  const [colorTheme, setColorTheme] = useState<ColorThemeId>(() => {
+    try {
+      const saved = localStorage.getItem('notepad_color_theme') as ColorThemeId;
+      if (saved && APP_THEMES.some((t) => t.id === saved)) return saved;
+    } catch { /* ignore */ }
+    return 'emerald';
+  });
+
   useEffect(() => {
     const root = document.documentElement;
     if (isDarkMode) {
@@ -295,6 +309,13 @@ export default function App() {
       localStorage.setItem('notepad_theme', 'light');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', colorTheme);
+    try {
+      localStorage.setItem('notepad_color_theme', colorTheme);
+    } catch { /* ignore */ }
+  }, [colorTheme]);
 
   useEffect(() => {
     localStorage.setItem('smart_notepad_notes_v4', JSON.stringify(notes));
@@ -349,12 +370,17 @@ export default function App() {
           const d = new Date(ts);
           if (d.getFullYear() !== now.getFullYear() || d.getMonth() !== now.getMonth()) return false;
         }
-        if (dateFilter === 'custom' && customDate) {
-          const d = new Date(ts);
-          const yyyy = d.getFullYear();
-          const mm = String(d.getMonth() + 1).padStart(2, '0');
-          const dd = String(d.getDate()).padStart(2, '0');
-          if (`${yyyy}-${mm}-${dd}` !== customDate) return false;
+        if (dateFilter === 'custom') {
+          if (customDateFrom) {
+            const [fy, fm, fd] = customDateFrom.split('-').map(Number);
+            const fromStart = new Date(fy, fm - 1, fd, 0, 0, 0, 0).getTime();
+            if (ts < fromStart) return false;
+          }
+          if (customDateTo) {
+            const [ty, tm, td] = customDateTo.split('-').map(Number);
+            const toEnd = new Date(ty, tm - 1, td, 23, 59, 59, 999).getTime();
+            if (ts > toEnd) return false;
+          }
         }
       }
 
@@ -375,7 +401,7 @@ export default function App() {
         return (a.id || '').localeCompare(b.id || '');
       }
       if (sortMode === 'title') {
-        return (a.title || '').localeCompare(b.title || '');
+        return (a.title || 'Unknown Title').localeCompare(b.title || 'Unknown Title');
       }
       if (sortMode === 'updated') {
         const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime() || parseNoteTimestamp(a);
@@ -390,7 +416,7 @@ export default function App() {
       return (b.id || '').localeCompare(a.id || '');
     });
     return result;
-  }, [notes, activeCategory, searchQuery, sortMode, activeColorFilter, dateFilter, customDate]);
+  }, [notes, activeCategory, searchQuery, sortMode, activeColorFilter, dateFilter, customDateFrom, customDateTo]);
 
   // Listen for openSettings event from other components
   useEffect(() => {
@@ -494,7 +520,7 @@ export default function App() {
         const fetchedNotes: Note[] = data
           .map((item: any, idx: number) => ({
             id: item.id || `sheet_note_${idx}_${String(item.notename || item.title || '').slice(0, 12)}`,
-            title: String(item.title || item.notename || 'Untitled'),
+            title: String(item.title || item.notename || '').trim(),
             category: String(item.category || ''),
             content: String(item.content !== undefined && item.content !== null ? item.content : (item.note !== undefined && item.note !== null ? item.note : '')),
             color: colors[idx % colors.length],
@@ -587,11 +613,46 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           datetime: new Date().toLocaleString(),
-          notename: savedNote.title || 'Untitled',
+          notename: savedNote.title || 'Unknown Title',
           category: savedNote.category || 'General',
           note: savedNote.content || '',
           action: noteData.id ? 'UPDATE' : 'CREATE'
         })
+      }).catch(() => {});
+    }
+  };
+
+  const handleUpdateNoteMeta = (id: string, updates: { category?: string; color?: NoteColor }) => {
+    const now = new Date().toISOString();
+    let updatedTarget: Note | null = null;
+    setNotes((prev) =>
+      prev.map((n) => {
+        if (n.id === id) {
+          updatedTarget = { ...n, ...updates, updatedAt: now };
+          return updatedTarget;
+        }
+        return n;
+      })
+    );
+    setViewingNote((prev) => (prev && prev.id === id ? { ...prev, ...updates, updatedAt: now } : prev));
+    if (updates.category && !categories.includes(updates.category) && updates.category !== 'General' && updates.category !== 'Uncategorized') {
+      setCategories((prev) => [...prev, updates.category!]);
+    }
+    if (updates.category) showToast(`Category set to "${updates.category}"`);
+    else if (updates.color) showToast('Colour updated');
+    if (updates.category && updatedTarget && isValidAppsScriptUrl(sheetsUrl)) {
+      const target: Note = updatedTarget;
+      fetch(sheetsUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          datetime: new Date().toLocaleString(),
+          notename: target.title || 'Unknown Title',
+          category: target.category || 'General',
+          note: target.content || '',
+          action: 'UPDATE',
+        }),
       }).catch(() => {});
     }
   };
@@ -749,13 +810,77 @@ export default function App() {
     }
   };
 
+  // Pull-to-refresh sync state & handlers
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullStartYRef = useRef<number | null>(null);
+  const isPullingRef = useRef(false);
+  const PULL_THRESHOLD = 52;
+
+  const canStartPull = () => {
+    if (isTrashView || isSyncingSheets) return false;
+    if (
+      isNoteModalOpen ||
+      !!viewingNote ||
+      isCategoryModalOpen ||
+      isBatchCategoryModalOpen ||
+      isSettingsModalOpen ||
+      isThemeModalOpen ||
+      isStatsModalOpen ||
+      deleteModal.isOpen ||
+      updateModal.isOpen
+    ) {
+      return false;
+    }
+    return window.scrollY <= 2;
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!canStartPull() || e.touches.length !== 1) return;
+    pullStartYRef.current = e.touches[0].clientY;
+    isPullingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (pullStartYRef.current === null || e.touches.length !== 1) return;
+    if (window.scrollY > 2) {
+      pullStartYRef.current = null;
+      isPullingRef.current = false;
+      setPullDistance(0);
+      return;
+    }
+    const dy = e.touches[0].clientY - pullStartYRef.current;
+    if (dy > 8) {
+      isPullingRef.current = true;
+      setPullDistance(Math.min(84, (dy - 8) * 0.45));
+    } else if (dy <= 0) {
+      isPullingRef.current = false;
+      setPullDistance(0);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isPullingRef.current && pullDistance >= PULL_THRESHOLD && !isSyncingSheets) {
+      handleSyncToGoogleSheets(false);
+    }
+    pullStartYRef.current = null;
+    isPullingRef.current = false;
+    setPullDistance(0);
+  };
+
   return (
-    <div className="min-h-screen w-full bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col">
+    <div
+      className="min-h-screen w-full bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       <Navbar
         viewMode={viewMode}
         onToggleViewMode={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
         isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(prev => !prev)}
+        colorTheme={colorTheme}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
         isTrashView={isTrashView}
         trashNotesCount={trashNotes.length}
         onToggleTrashView={setIsTrashView}
@@ -764,8 +889,6 @@ export default function App() {
         onImportNotes={handleImportNotes}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenStats={() => setIsStatsModalOpen(true)}
-        onSyncSheets={() => handleSyncToGoogleSheets()}
-        isSyncingSheets={isSyncingSheets}
         onCheckUpdate={() => handleCheckAppUpdate()}
       />
 
@@ -784,6 +907,33 @@ export default function App() {
             />
           ) : (
             <div className="space-y-3.5">
+              {/* Pull-to-Refresh Sync Indicator */}
+              {(pullDistance > 6 || isSyncingSheets) && (
+                <div
+                  className="flex items-center justify-center transition-all duration-150 overflow-hidden"
+                  style={{ height: isSyncingSheets ? 36 : Math.max(28, Math.round(pullDistance * 0.65)) }}
+                >
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[var(--bg-card)] border border-[var(--border)] shadow-xs text-[11px] font-bold text-[var(--accent-gold)]">
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${
+                        isSyncingSheets
+                          ? 'animate-spin'
+                          : pullDistance >= PULL_THRESHOLD
+                          ? 'rotate-180 transition-transform duration-150'
+                          : 'transition-transform duration-150'
+                      }`}
+                    />
+                    <span>
+                      {isSyncingSheets
+                        ? 'Syncing notes...'
+                        : pullDistance >= PULL_THRESHOLD
+                        ? 'Release to sync'
+                        : 'Pull down to sync'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* 2-Row Search & Expandable Filter Controls */}
               <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-2.5 space-y-2.5 shadow-xs">
                 {/* Row 1 (Single Horizontal Row): Search input, Color filter icon, Category filter icon, Other filter icon */}
@@ -971,7 +1121,7 @@ export default function App() {
                     title="Other filter (Sort & Date)"
                     aria-label="Other filter"
                     className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 flex items-center justify-center ${
-                      isOtherFiltersOpen || sortMode !== 'newest' || dateFilter !== 'all'
+                      isOtherFiltersOpen || sortMode !== 'newest' || dateFilter !== 'all' || !!customDateFrom || !!customDateTo
                         ? 'bg-[var(--accent-gold)]/15 border-[var(--accent-gold)] text-[var(--accent-gold)]'
                         : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     }`}
@@ -1013,18 +1163,51 @@ export default function App() {
                         <option value="7days" className="bg-[var(--bg-card)]">Last 7 Days</option>
                         <option value="30days" className="bg-[var(--bg-card)]">Last 30 Days</option>
                         <option value="this_month" className="bg-[var(--bg-card)]">This Month</option>
-                        <option value="custom" className="bg-[var(--bg-card)]">Specific Date</option>
+                        <option value="custom" className="bg-[var(--bg-card)]">Custom Range</option>
                       </select>
                     </div>
 
                     {dateFilter === 'custom' && (
-                      <div className="col-span-2 flex items-center justify-end">
-                        <input
-                          type="date"
-                          value={customDate}
-                          onChange={(e) => setCustomDate(e.target.value)}
-                          className="w-full sm:w-auto bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-gold)]"
-                        />
+                      <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                        <div className="flex items-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-2.5 py-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] shrink-0">
+                            From
+                          </span>
+                          <input
+                            type="date"
+                            value={customDateFrom}
+                            max={customDateTo || undefined}
+                            onChange={(e) => setCustomDateFrom(e.target.value)}
+                            aria-label="From date"
+                            className="w-full bg-transparent text-xs font-bold text-[var(--text-primary)] focus:outline-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-2.5 py-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)] shrink-0">
+                            To
+                          </span>
+                          <input
+                            type="date"
+                            value={customDateTo}
+                            min={customDateFrom || undefined}
+                            onChange={(e) => setCustomDateTo(e.target.value)}
+                            aria-label="To date"
+                            className="w-full bg-transparent text-xs font-bold text-[var(--text-primary)] focus:outline-none"
+                          />
+                          {(customDateFrom || customDateTo) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCustomDateFrom('');
+                                setCustomDateTo('');
+                              }}
+                              title="Clear date range"
+                              className="p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1066,7 +1249,7 @@ export default function App() {
                 <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-10 text-center space-y-3">
                   <p className="text-sm font-bold text-[var(--text-primary)]">No notes found</p>
                   <p className="text-xs text-[var(--text-muted)]">
-                    Tap + to write a new note or tap Sync to fetch notes from Google Sheets.
+                    Tap + to write a new note or pull down to sync from Google Sheets.
                   </p>
                 </div>
               ) : (
@@ -1108,18 +1291,18 @@ export default function App() {
       <NoteModal
         isOpen={isNoteModalOpen}
         initialNote={editingNote}
-        categories={categories}
         onSave={handleSaveNote}
         onClose={() => setIsNoteModalOpen(false)}
-        onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
       />
 
       <ViewNoteModal
         note={viewingNote}
         isOpen={!!viewingNote}
+        categories={categories}
         onClose={() => setViewingNote(null)}
         onEdit={(n) => { setEditingNote(n); setIsNoteModalOpen(true); }}
         onDelete={requestDeleteNote}
+        onUpdateNoteMeta={handleUpdateNoteMeta}
         onShowToast={showToast}
       />
 
@@ -1185,6 +1368,15 @@ export default function App() {
         onShowToast={showToast}
       />
 
+      <ThemeModal
+        isOpen={isThemeModalOpen}
+        isDarkMode={isDarkMode}
+        colorTheme={colorTheme}
+        onSetDarkMode={setIsDarkMode}
+        onSelectColorTheme={setColorTheme}
+        onClose={() => setIsThemeModalOpen(false)}
+      />
+
       {/* Floating Batch Bar (persistent when selection is active) */}
       <FloatingBatchBar
         selectedCount={selectedNoteIds.length}
@@ -1197,7 +1389,7 @@ export default function App() {
       {selectedNoteIds.length === 0 && (
         <button
           onClick={() => { setEditingNote(null); setIsNoteModalOpen(true); }}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#D4AF37] text-[#14241D] flex items-center justify-center shadow-2xl hover:bg-[#D4AF37]/95 hover:scale-105 active:scale-95 transition-all cursor-pointer z-30"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[var(--accent-gold)] text-[var(--accent-contrast)] flex items-center justify-center shadow-2xl hover:opacity-95 hover:scale-105 active:scale-95 transition-all cursor-pointer z-30"
           title="নতুন নোট লিখুন"
         >
           <Plus className="w-8 h-8 stroke-[2.5]" />

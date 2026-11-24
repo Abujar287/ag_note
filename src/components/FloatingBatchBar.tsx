@@ -20,14 +20,14 @@ export const FloatingBatchBar: React.FC<FloatingBatchBarProps> = ({
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-lg animate-in slide-in-from-bottom-6 duration-200">
-      <div className="bg-[#14241D]/95 backdrop-blur-md text-[#F0F7F4] rounded-2xl shadow-2xl p-3 sm:p-3.5 border border-[#D4AF37]/50 flex items-center justify-between gap-3">
+      <div className="bg-[var(--bg-card)]/95 backdrop-blur-md text-[var(--text-primary)] rounded-2xl shadow-2xl p-3 sm:p-3.5 border border-[var(--accent-gold)]/50 flex items-center justify-between gap-3">
         {/* Left: Selected count display */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-[#D4AF37] text-[#14241D] flex items-center justify-center font-black shrink-0 shadow-xs">
+          <div className="w-8 h-8 rounded-xl bg-[var(--accent-gold)] text-[var(--accent-contrast)] flex items-center justify-center font-black shrink-0 shadow-xs">
             <CheckSquare className="w-4 h-4 stroke-[2.5]" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs sm:text-sm font-bold text-[#F0F7F4] truncate">
+            <div className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
               {selectedCount} selected
             </div>
           </div>
@@ -39,7 +39,7 @@ export const FloatingBatchBar: React.FC<FloatingBatchBarProps> = ({
           <button
             type="button"
             onClick={onAssignCategory}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#162920] hover:bg-[#244234] border border-[#2D4A3D] hover:border-[#10B981]/50 rounded-xl text-xs font-bold text-[#10B981] transition-all cursor-pointer shadow-xs active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--bg-elevated)] hover:border-[var(--accent-gold)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--accent-gold)] transition-all cursor-pointer shadow-xs active:scale-95"
             title="Assign Category"
           >
             <Folder className="w-4 h-4" />
@@ -50,10 +50,10 @@ export const FloatingBatchBar: React.FC<FloatingBatchBarProps> = ({
           <button
             type="button"
             onClick={onDelete}
-            className="flex items-center gap-1.5 px-3 py-2 bg-rose-950/50 hover:bg-rose-900/70 border border-rose-800 text-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-2 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-500 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
             title="Delete all selected notes"
           >
-            <Trash2 className="w-4 h-4 text-rose-400" />
+            <Trash2 className="w-4 h-4" />
             <span className="hidden xs:inline sm:inline">Delete</span>
           </button>
 
@@ -61,7 +61,7 @@ export const FloatingBatchBar: React.FC<FloatingBatchBarProps> = ({
           <button
             type="button"
             onClick={onClear}
-            className="flex items-center gap-1 px-2.5 py-2 bg-[#162920] hover:bg-[#244234] border border-[#2D4A3D] text-[#8DA89B] hover:text-[#F0F7F4] rounded-xl text-xs font-bold transition-all cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-2 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl text-xs font-bold transition-all cursor-pointer"
             title="Cancel selection mode"
           >
             <X className="w-4 h-4" />

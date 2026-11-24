@@ -31,6 +31,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   const [copied, setCopied] = useState(false);
   const colorConfig = NOTE_COLORS.find((c) => c.id === note.color) || NOTE_COLORS[0];
   const firstLine = getFirstLine(note.content);
+  const displayTitle = note.title && note.title.trim() ? note.title.trim() : 'Unknown Title';
+  const displayCategory = note.category && note.category.trim() ? note.category.trim() : 'General';
+  const displayDateTime = formatDate(note.createdAt || note.rawDate || note.updatedAt, true);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
@@ -72,14 +75,17 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const fullText = note.title ? `${note.title}\n\n${note.content}` : note.content;
-    navigator.clipboard.writeText(fullText).then(() => {
-      setCopied(true);
-      onShowToast('Note copied to clipboard');
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      onShowToast('Could not copy note');
-    });
+    const fullText = note.title && note.title.trim() ? `${note.title}\n\n${note.content}` : note.content;
+    navigator.clipboard
+      .writeText(fullText)
+      .then(() => {
+        setCopied(true);
+        onShowToast('Note copied to clipboard');
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        onShowToast('Could not copy note');
+      });
   };
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -106,51 +112,37 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           else if (onSelect) onSelect(note.id);
         }}
         onClick={handleCardClick}
-        className={`group relative flex items-center justify-between gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none ${
+        className={`group relative flex flex-col gap-1.5 px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer select-none ${
           isSelected
             ? 'border-[var(--accent-gold)] bg-[var(--accent-gold)]/15 ring-1 ring-[var(--accent-gold)]'
             : 'border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--accent-gold)]/60'
         }`}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {onSelect && (isSelectionActive || isSelected) && (
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onSelect(note.id);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-4 h-4 rounded cursor-pointer shrink-0 accent-[#D4AF37]"
-            />
-          )}
-
-          <div className={`w-2 h-2 rounded-full shrink-0 ${colorConfig.dotClass}`} />
-
-          <div className="flex items-baseline gap-2 min-w-0 overflow-hidden">
-            <h3 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate group-hover:text-[var(--accent-gold)] transition-colors shrink-0 max-w-[120px] sm:max-w-[220px]">
-              {note.title || 'Untitled Note'}
-            </h3>
-
-            {firstLine && (
-              <span className="text-[11px] text-[var(--text-muted)] truncate hidden md:inline-block flex-1 min-w-0 font-normal">
-                {firstLine}
-              </span>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+            {onSelect && (isSelectionActive || isSelected) && (
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onSelect(note.id);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-4 h-4 rounded cursor-pointer shrink-0 accent-[var(--accent-gold)]"
+              />
             )}
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          {note.category && (
-            <span className="font-bold text-[9.5px] text-[var(--accent-gold)] uppercase tracking-wider bg-[var(--bg-elevated)] px-1.5 py-0.5 rounded border border-[var(--border)] max-w-[75px] truncate">
-              {note.category}
+            <div className={`w-2 h-2 rounded-full shrink-0 ${colorConfig.dotClass}`} />
+
+            <span className="font-bold text-[10px] text-[var(--accent-gold)] uppercase tracking-wider bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border)] break-words">
+              {displayCategory}
             </span>
-          )}
 
-          <span className="font-mono tabular-nums text-[10px] font-medium text-[var(--text-muted)] shrink-0 hidden sm:inline">
-            {formatDate(note.updatedAt || note.createdAt || note.rawDate)}
-          </span>
+            <span className="font-mono tabular-nums text-[10px] font-medium text-[var(--text-muted)] shrink-0">
+              {displayDateTime}
+            </span>
+          </div>
 
           {/* ONLY 3 BUTTONS: Copy, Edit, Remove */}
           <div className="flex items-center gap-1 shrink-0">
@@ -182,6 +174,17 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             </button>
           </div>
         </div>
+
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h3 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate group-hover:text-[var(--accent-gold)] transition-colors">
+            {displayTitle}
+          </h3>
+          {firstLine && (
+            <span className="text-[11px] text-[var(--text-muted)] truncate hidden sm:inline-block flex-1 min-w-0 font-normal">
+              {firstLine}
+            </span>
+          )}
+        </div>
       </div>
     );
   }
@@ -206,8 +209,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       }`}
     >
       <div>
-        <div className="flex items-center justify-between gap-1 mb-2.5">
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
             {onSelect && (isSelectionActive || isSelected) && (
               <input
                 type="checkbox"
@@ -217,17 +220,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   onSelect(note.id);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-3.5 h-3.5 rounded cursor-pointer shrink-0 accent-[#D4AF37]"
+                className="w-3.5 h-3.5 rounded cursor-pointer shrink-0 accent-[var(--accent-gold)]"
               />
             )}
             <div className={`w-2 h-2 rounded-full shrink-0 ${colorConfig.dotClass}`} />
-            {note.category && (
-              <span className="text-[10px] font-bold text-[var(--accent-gold)] uppercase tracking-wider truncate max-w-[75px]">
-                {note.category}
-              </span>
-            )}
-            <span className="font-mono tabular-nums text-[9.5px] text-[var(--text-muted)] shrink-0">
-              {formatDate(note.updatedAt || note.createdAt || note.rawDate)}
+            <span className="text-[10px] font-bold text-[var(--accent-gold)] uppercase tracking-wider bg-[var(--bg-elevated)] px-1.5 py-0.5 rounded border border-[var(--border)] break-words">
+              {displayCategory}
+            </span>
+            <span className="font-mono tabular-nums text-[10px] text-[var(--text-muted)] shrink-0">
+              {displayDateTime}
             </span>
           </div>
 
@@ -264,7 +265,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
         <div className="min-w-0">
           <h3 className="font-bold text-[var(--text-primary)] text-sm mb-1 truncate group-hover:text-[var(--accent-gold)] transition-colors">
-            {note.title || 'Untitled Note'}
+            {displayTitle}
           </h3>
           <p className="text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed font-normal">
             {firstLine || 'No content'}

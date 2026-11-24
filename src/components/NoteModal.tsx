@@ -1,23 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  X,
-  Mic,
-  MicOff,
-  Bold,
-  Italic,
-  List,
-  CheckSquare,
-  Code,
-  Plus,
-  Save,
-} from 'lucide-react';
-import { Note, NoteColor, NOTE_COLORS } from '../types/note';
-import { countWordsAndChars } from '../utils/banglaUtils';
+import { ArrowLeft, Bold, Italic } from 'lucide-react';
+import { Note, NoteColor } from '../types/note';
 
 interface NoteModalProps {
   isOpen: boolean;
   initialNote: Note | null;
-  categories: string[];
   onSave: (noteData: {
     id?: string;
     title: string;
@@ -26,64 +13,47 @@ interface NoteModalProps {
     color: NoteColor;
     isPinned?: boolean;
     isLocked?: boolean;
-    password?: string;
   }) => void;
   onClose: () => void;
-  onOpenCategoryModal: () => void;
 }
 
 export const NoteModal: React.FC<NoteModalProps> = ({
   isOpen,
   initialNote,
-  categories,
   onSave,
   onClose,
-  onOpenCategoryModal,
 }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState('General');
-  const [color, setColor] = useState<NoteColor>('blue');
-  const [isListening, setIsListening] = useState(false);
-  const [speechLang, setSpeechLang] = useState<'bn-BD' | 'en-US'>('bn-BD');
-  const [speechError, setSpeechError] = useState('');
 
+  const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
     if (initialNote) {
       setTitle(initialNote.title || '');
       setContent(initialNote.content || '');
-      setCategory(initialNote.category || 'General');
-      setColor(initialNote.color || 'blue');
+      setTimeout(() => {
+        const el = contentRef.current;
+        if (el) {
+          el.focus();
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        }
+      }, 30);
     } else {
       setTitle('');
       setContent('');
-      setCategory('General');
-      setColor('blue');
+      setTimeout(() => {
+        titleRef.current?.focus();
+      }, 30);
     }
-    setIsListening(false);
-    setSpeechError('');
   }, [initialNote, isOpen]);
-
-  // Clean up speech recognition on close
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // ignore
-        }
-      }
-    };
-  }, []);
 
   if (!isOpen) return null;
 
-  // Text formatting helpers
-  const insertFormatting = (prefix: string, suffix = '') => {
+  const insertFormatting = (prefix: string, suffix: string) => {
     const textarea = contentRef.current;
     if (!textarea) return;
 
@@ -93,75 +63,20 @@ export const NoteModal: React.FC<NoteModalProps> = ({
     const beforeText = content.substring(0, start);
     const afterText = content.substring(end);
 
-    const newContent = `${beforeText}${prefix}${selectedText || 'text'}${suffix}${afterText}`;
+    const inserted = selectedText || 'text';
+    const newContent = `${beforeText}${prefix}${inserted}${suffix}${afterText}`;
     setContent(newContent);
 
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(
         start + prefix.length,
-        start + prefix.length + (selectedText ? selectedText.length : 4)
+        start + prefix.length + inserted.length
       );
     }, 10);
   };
 
-  // Voice Typing (Speech Recognition)
-  const toggleSpeechRecognition = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setSpeechError('Voice Typing requires Chrome or Edge.');
-      setTimeout(() => setSpeechError(''), 3000);
-      return;
-    }
-
-    if (isListening) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsListening(false);
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = speechLang;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            transcript += event.results[i][0].transcript + ' ';
-          }
-        }
-        if (transcript) {
-          setContent((prev) => (prev ? prev + ' ' + transcript : transcript));
-        }
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch {
-      setIsListening(false);
-    }
-  };
-
-  const handleSaveAndClose = () => {
+  const handleSave = () => {
     if (!title.trim() && !content.trim()) {
       onClose();
       return;
@@ -169,225 +84,88 @@ export const NoteModal: React.FC<NoteModalProps> = ({
 
     onSave({
       id: initialNote?.id,
-      title: title.trim() || 'Untitled Note',
+      title: title.trim(),
       content: content.trim(),
-      category: category || 'General',
-      color,
-      isPinned: initialNote?.isPinned || false,
+      category: initialNote?.category || 'General',
+      color: initialNote?.color || 'blue',
+      isPinned: false,
       isLocked: false,
     });
     onClose();
   };
 
-  const handleCloseRequest = () => {
-    // If dirty, auto-save before closing
-    if (title.trim() || content.trim()) {
-      handleSaveAndClose();
-    } else {
-      onClose();
-    }
-  };
-
-  const { words, chars } = countWordsAndChars(content);
-
   return (
     <div className="fixed inset-0 z-50 w-screen h-screen bg-[var(--bg-main)] text-[var(--text-primary)] flex flex-col overflow-hidden animate-in fade-in duration-150">
-      {/* Full-Screen Header */}
-      <div className="px-4 sm:px-6 py-3 border-b border-[var(--border)] bg-[var(--bg-card)] flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <button
-            type="button"
-            onClick={handleCloseRequest}
-            title="Save and Exit"
-            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-2 rounded-xl hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-bold text-sm sm:text-base text-[var(--text-primary)] truncate">
-              {initialNote ? 'Edit Note (সম্পাদনা)' : 'New Note (নতুন নোট)'}
-            </h2>
-            <p className="text-[11px] text-[var(--text-muted)] hidden sm:block">
-              Full-Screen Editor · Autosaves when exiting
-            </p>
-          </div>
-        </div>
+      {/* Top Bar: Left = Back button | Right = Cancel & Save buttons */}
+      <div className="px-3 sm:px-5 h-14 border-b border-[var(--border)] bg-[var(--bg-card)] flex items-center justify-between gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
+          aria-label="Back"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back</span>
+        </button>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={handleSaveAndClose}
-            className="px-4 sm:px-5 py-2 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[var(--accent-gold)] hover:opacity-90 active:scale-95 rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2"
+            onClick={onClose}
+            className="px-3.5 sm:px-4 py-2 text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl transition-colors cursor-pointer active:scale-95"
           >
-            <Save className="w-4 h-4 stroke-[2.5]" />
-            <span>{initialNote ? 'Update' : 'Save'}</span>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-4 sm:px-5 py-2 text-xs font-black text-[var(--accent-contrast)] bg-[var(--accent-gold)] hover:opacity-90 rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
+          >
+            Save
           </button>
         </div>
       </div>
 
-      {/* Editor Body */}
-      <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto p-4 sm:p-6 overflow-y-auto space-y-4">
-        {/* Title and Category Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="sm:col-span-2">
-            <label className="block text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider mb-1">
-              Note Title / নাম
-            </label>
-            <input
-              type="text"
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title here..."
-              className="w-full px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl text-sm sm:text-base font-bold focus:outline-none focus:border-[var(--accent-gold)] text-[var(--text-primary)] placeholder-[var(--text-muted)]/60 transition-all"
-            />
-          </div>
+      {/* Single Row: Bold & Italic only */}
+      <div className="px-4 sm:px-6 py-1.5 border-b border-[var(--border)] bg-[var(--bg-card)]/60 flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => insertFormatting('**', '**')}
+          title="Bold"
+          aria-label="Bold"
+          className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors cursor-pointer"
+        >
+          <Bold className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => insertFormatting('*', '*')}
+          title="Italic"
+          aria-label="Italic"
+          className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors cursor-pointer"
+        >
+          <Italic className="w-4 h-4" />
+        </button>
+      </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider">
-                Category
-              </label>
-              <button
-                type="button"
-                onClick={onOpenCategoryModal}
-                className="text-[10px] text-[var(--accent-gold)] hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
-              >
-                <Plus className="w-3 h-3" /> Manage
-              </button>
-            </div>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-[var(--bg-card)] border border-[var(--border)] rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:border-[var(--accent-gold)] text-[var(--text-primary)] cursor-pointer transition-all"
-            >
-              <option value="General">General</option>
-              <option value="Uncategorized">Uncategorized</option>
-              {categories
-                .filter((c) => c !== 'General' && c !== 'Uncategorized')
-                .map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-            </select>
-          </div>
-        </div>
+      {/* Clean Full-Page Note Writing Surface */}
+      <div className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 overflow-hidden">
+        <input
+          ref={titleRef}
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title..."
+          className="w-full pb-3 mb-3 bg-transparent border-b border-[var(--border)]/60 text-lg sm:text-xl font-bold text-[var(--text-primary)] placeholder-[var(--text-muted)]/50 focus:outline-none focus:border-[var(--accent-gold)] transition-colors shrink-0"
+        />
 
-        {/* Formatting Toolbar */}
-        <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2 bg-[var(--bg-card)] rounded-xl border border-[var(--border)]">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => insertFormatting('**', '**')}
-              title="Bold"
-              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors cursor-pointer"
-            >
-              <Bold className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('*', '*')}
-              title="Italic"
-              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors cursor-pointer"
-            >
-              <Italic className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('\n- ')}
-              title="Bullet list"
-              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors cursor-pointer"
-            >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('\n[ ] ')}
-              title="Checkbox"
-              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors cursor-pointer"
-            >
-              <CheckSquare className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('`', '`')}
-              title="Code snippet"
-              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors cursor-pointer"
-            >
-              <Code className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Voice Typing and Color Selector */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <select
-                value={speechLang}
-                onChange={(e) => setSpeechLang(e.target.value as any)}
-                className="bg-[var(--bg-elevated)] text-[var(--text-muted)] text-[10px] font-bold px-2 py-1 rounded-md border border-[var(--border)] focus:outline-none cursor-pointer"
-              >
-                <option value="bn-BD">বাংলা (BN)</option>
-                <option value="en-US">English (EN)</option>
-              </select>
-              <button
-                type="button"
-                onClick={toggleSpeechRecognition}
-                className={`flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  isListening
-                    ? 'bg-rose-600 text-white animate-pulse'
-                    : 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--accent-gold)]'
-                }`}
-              >
-                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                <span>{isListening ? 'Stop' : 'Voice'}</span>
-              </button>
-            </div>
-
-            {/* Note Color Accent selection */}
-            <div className="flex items-center gap-1 pl-2 border-l border-[var(--border)]">
-              {NOTE_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setColor(c.id)}
-                  className={`w-4 h-4 rounded-full ${c.bgClass} transition-transform ${
-                    color === c.id ? 'ring-2 ring-[var(--accent-gold)] scale-125' : 'opacity-50 hover:opacity-100'
-                  }`}
-                  title={c.label}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {speechError && (
-          <p className="text-xs font-semibold text-rose-500 px-1">{speechError}</p>
-        )}
-
-        {/* Full Height Textarea */}
-        <div className="flex-1 flex flex-col min-h-[380px]">
-          <textarea
-            ref={contentRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Type or dictate your note here..."
-            className="flex-1 w-full p-4 sm:p-5 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl text-sm sm:text-base leading-relaxed focus:outline-none focus:border-[var(--accent-gold)] text-[var(--text-primary)] placeholder-[var(--text-muted)]/50 resize-none transition-all font-sans"
-          />
-        </div>
-
-        {/* Footer Word & Char Count */}
-        <div className="flex justify-between items-center text-xs font-mono text-[var(--text-muted)] px-1 py-1 shrink-0">
-          <div className="flex items-center gap-3">
-            <span>{words} words</span>
-            <span>·</span>
-            <span>{chars} characters</span>
-          </div>
-          <span className="text-[11px] text-[var(--text-muted)]/80 font-sans">
-            Auto-saves on exit
-          </span>
-        </div>
+        <textarea
+          ref={contentRef}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Write your note..."
+          className="flex-1 w-full bg-transparent text-sm sm:text-base leading-relaxed text-[var(--text-primary)] placeholder-[var(--text-muted)]/50 focus:outline-none resize-none font-sans"
+        />
       </div>
     </div>
   );

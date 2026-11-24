@@ -87,29 +87,29 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col"
+        className="w-full max-w-md bg-[var(--bg-card)] rounded-2xl shadow-2xl border border-[var(--border)] p-5 sm:p-6 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
+            <div className="p-2 bg-[var(--accent-gold)]/15 text-[var(--accent-gold)] rounded-xl">
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
+              <h3 className="font-bold text-[var(--text-primary)] text-base">
                 Manage Categories
               </h3>
-              <p className="text-xs text-slate-400">Add, rename, or delete note categories</p>
+              <p className="text-xs text-[var(--text-muted)]">Add, rename, or delete note categories</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg transition-colors cursor-pointer"
+            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1.5 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -117,7 +117,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
 
         {/* Add New Category Input */}
         <form onSubmit={handleAddSubmit} className="space-y-2">
-          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
             Add New Category
           </label>
           <div className="flex gap-2">
@@ -129,11 +129,11 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                 if (error) setError('');
               }}
               placeholder="e.g. Finance, Health, Projects..."
-              className="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-colors"
+              className="flex-1 px-3.5 py-2 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[var(--accent-gold)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/70 transition-colors"
             />
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-xs cursor-pointer shrink-0"
+              className="px-4 py-2 text-xs font-bold text-[var(--accent-contrast)] bg-[var(--accent-gold)] hover:opacity-90 rounded-xl transition-colors shadow-xs cursor-pointer shrink-0"
             >
               Add
             </button>
@@ -148,7 +148,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
 
         {/* Categories List with Edit and Delete */}
         <div className="flex-1 overflow-y-auto space-y-2 min-h-[140px] max-h-[300px] pr-1">
-          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
             Existing Categories ({existingCategories.length})
           </label>
 
@@ -160,7 +160,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
               return (
                 <div
                   key={cat}
-                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] transition-colors"
                 >
                   {isEditing ? (
                     <div className="flex items-center gap-2 flex-1 mr-2">
@@ -173,7 +173,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                           if (e.key === 'Enter') handleSaveRename(cat);
                           if (e.key === 'Escape') setEditingCat(null);
                         }}
-                        className="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-blue-500 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                        className="flex-1 px-2.5 py-1 bg-[var(--bg-card)] border border-[var(--accent-gold)] rounded-lg text-xs text-[var(--text-primary)] focus:outline-none"
                       />
                       <button
                         type="button"
@@ -186,7 +186,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setEditingCat(null)}
-                        className="p-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg transition-colors cursor-pointer"
                         title="Cancel"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -194,11 +194,11 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Folder className="w-4 h-4 text-blue-500 shrink-0" />
-                      <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      <Folder className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+                      <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] break-words">
                         {cat}
                       </span>
-                      <span className="text-[11px] font-mono tabular-nums text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.5 rounded-md">
+                      <span className="text-[11px] font-mono tabular-nums text-[var(--text-muted)] bg-[var(--bg-card)] px-1.5 py-0.5 rounded-md border border-[var(--border)] shrink-0">
                         {count} {count === 1 ? 'note' : 'notes'}
                       </span>
                     </div>
@@ -210,7 +210,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                         type="button"
                         onClick={() => startEditing(cat)}
                         title="Rename category"
-                        className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-[var(--text-muted)] hover:text-[var(--accent-gold)] hover:bg-[var(--bg-card)] rounded-lg transition-colors cursor-pointer"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
@@ -226,8 +226,8 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                         disabled={existingCategories.length <= 1}
                         className={`p-1.5 rounded-lg transition-colors ${
                           existingCategories.length <= 1
-                            ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
-                            : 'text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer'
+                            ? 'text-[var(--text-muted)]/30 cursor-not-allowed'
+                            : 'text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer'
                         }`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -241,11 +241,11 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex justify-end pt-3 border-t border-[var(--border)]">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-xl transition-colors cursor-pointer"
           >
             Done
           </button>

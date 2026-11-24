@@ -115,7 +115,7 @@ export const BatchCategoryModal: React.FC<BatchCategoryModalProps> = ({
                 <button
                   type="submit"
                   disabled={!newCatName.trim()}
-                  className="px-3 py-2 text-xs font-bold rounded-xl bg-[var(--accent-gold)] text-[#14241D] hover:opacity-90 disabled:opacity-50 transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-3 py-2 text-xs font-bold rounded-xl bg-[var(--accent-gold)] text-[var(--accent-contrast)] hover:opacity-90 disabled:opacity-50 transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Assign</span>

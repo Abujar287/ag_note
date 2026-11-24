@@ -82,7 +82,7 @@ export const TrashView: React.FC<TrashViewProps> = ({
           <button
             type="button"
             onClick={onBackToNotes}
-            className="mt-4 px-4 py-2 text-xs font-bold text-[#14241D] bg-[var(--accent-gold)] rounded-xl transition-colors shadow-xs cursor-pointer"
+            className="mt-4 px-4 py-2 text-xs font-bold text-[var(--accent-contrast)] bg-[var(--accent-gold)] rounded-xl transition-colors shadow-xs cursor-pointer"
           >
             Back to All Notes
           </button>
@@ -107,7 +107,7 @@ export const TrashView: React.FC<TrashViewProps> = ({
                   </div>
 
                   <h3 className="font-bold text-[var(--text-primary)] text-xs mb-0.5 truncate">
-                    {note.title}
+                    {note.title && note.title.trim() ? note.title : 'Unknown Title'}
                   </h3>
 
                   <p className="text-[11px] text-[var(--text-muted)] truncate leading-tight mb-2.5">

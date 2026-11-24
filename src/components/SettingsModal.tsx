@@ -151,7 +151,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveUrl}
-                  className="px-3 py-2 bg-[var(--accent-gold)] text-[#14241D] rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer active:scale-95"
+                  className="px-3 py-2 bg-[var(--accent-gold)] text-[var(--accent-contrast)] rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer active:scale-95"
                 >
                   {urlSaved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
                   <span>{urlSaved ? 'Saved' : 'Save'}</span>
@@ -251,7 +251,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       setInstallTip((prev) => !prev);
                     }
                   }}
-                  className="flex-1 py-2 px-3 bg-[var(--accent-gold)] text-[#14241D] rounded-xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 py-2 px-3 bg-[var(--accent-gold)] text-[var(--accent-contrast)] rounded-xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
                   <span>Install App</span>
@@ -275,7 +275,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="px-5 py-3.5 bg-[var(--bg-elevated)] border-t border-[var(--border)] flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2 text-xs font-black uppercase tracking-wider text-[#14241D] bg-[var(--accent-gold)] rounded-xl shadow-md transition-transform active:scale-95 cursor-pointer"
+            className="px-6 py-2 text-xs font-black uppercase tracking-wider text-[var(--accent-contrast)] bg-[var(--accent-gold)] rounded-xl shadow-md transition-transform active:scale-95 cursor-pointer"
           >
             Close
           </button>

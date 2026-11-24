@@ -202,7 +202,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             <button
               type="button"
               onClick={handleStartDownload}
-              className="flex-1 py-2.5 px-4 bg-[var(--accent-gold)] text-[#14241D] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
+              className="flex-1 py-2.5 px-4 bg-[var(--accent-gold)] text-[var(--accent-contrast)] rounded-xl text-xs font-black transition-all cursor-pointer shadow-md active:scale-95"
             >
               Download
             </button>
