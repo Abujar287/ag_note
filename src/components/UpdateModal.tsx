@@ -27,6 +27,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const [isComplete, setIsComplete] = useState(false);
   const [downloadedFileName, setDownloadedFileName] = useState<string | null>(null);
   const [downloadedBlobUrl, setDownloadedBlobUrl] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setTotalBytesState(apkSize || 0);
@@ -39,6 +40,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
       setDownloadedBytes(0);
       setIsComplete(false);
       setDownloadedFileName(null);
+      setErrorMessage(null);
       if (downloadedBlobUrl) {
         URL.revokeObjectURL(downloadedBlobUrl);
         setDownloadedBlobUrl(null);
@@ -66,6 +68,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     setDownloadProgress(0);
     setDownloadedBytes(0);
     setIsComplete(false);
+    setErrorMessage(null);
 
     const androidBridge = (window as any).Android;
     if (
@@ -83,12 +86,15 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         setDownloadProgress(100);
         if (totalBytes > 0) setDownloadedBytes(totalBytes);
         setIsComplete(true);
+        setErrorMessage(null);
         onShowToast(`Saved to Download/${savedName || filename}`, 'success');
       };
       (window as any).__onApkError = (errMsg: string) => {
+        const msg = errMsg || 'APK download failed.';
         setIsDownloading(false);
         setIsComplete(false);
-        onShowToast(errMsg || 'APK download failed.', 'error');
+        setErrorMessage(msg);
+        onShowToast(msg, 'error');
       };
 
       if (typeof androidBridge.downloadApkWithSize === 'function') {
@@ -200,6 +206,12 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 Download complete. Tap Update to install.
               </p>
             )}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-400 leading-relaxed">
+            {errorMessage}
           </div>
         )}
 

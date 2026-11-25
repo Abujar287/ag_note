@@ -104,7 +104,8 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'notedpad' }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'notedpad123' }}
         run: |
-          gradle assembleRelease --no-daemon -PVERSION_NAME="${APP_VER}" -PVERSION_CODE="${{ github.run_number }}"
+          APP_VERSION_CODE=$((1000 + ${{ github.run_number }}))
+          gradle assembleRelease --no-daemon -PVERSION_NAME="${APP_VER}" -PVERSION_CODE="${APP_VERSION_CODE}"
 
       - name: Package APK output
         run: |

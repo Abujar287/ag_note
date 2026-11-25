@@ -4,10 +4,13 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.DownloadManager
+import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.pm.Signature
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -439,7 +442,7 @@ class MainActivity : Activity() {
                             }?.takeIf { it.isNotBlank() } ?: fallbackName
 
                             val dmUri = dm.getUriForDownloadedFile(downloadId)
-                            lastDownloadedUri = dmUri
+                            lastDownloadedUri = dmUri ?: localUriStr?.let { Uri.parse(it) }
                             lastDownloadedFileName = resolvedName
 
                             val finalBytes = total.coerceAtLeast(downloaded)
@@ -602,12 +605,53 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun isZipApkHeader(file: File): Boolean {
+        return try {
+            file.inputStream().use { input ->
+                val header = ByteArray(4)
+                input.read(header) == 4 &&
+                    header[0] == 0x50.toByte() &&
+                    header[1] == 0x4B.toByte() &&
+                    header[2] == 0x03.toByte() &&
+                    header[3] == 0x04.toByte()
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun extractSignatureHexSet(info: PackageInfo?): Set<String> {
+        if (info == null) return emptySet()
+        val sigs: Array<Signature>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val signingInfo = info.signingInfo
+            if (signingInfo == null) {
+                null
+            } else if (signingInfo.hasMultipleSigners()) {
+                signingInfo.apkContentsSigners
+            } else {
+                signingInfo.signingCertificateHistory
+            }
+        } else {
+            info.signatures
+        }
+        return sigs?.map { it.toCharsString() }?.toSet() ?: emptySet()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun getPackageLongVersionCode(info: PackageInfo): Long {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.longVersionCode
+        } else {
+            info.versionCode.toLong()
+        }
+    }
+
     /**
-     * Stages the downloaded APK from DownloadManager/Download folder into our FileProvider-backed
-     * cache directory so PackageInstaller never fails with content://downloads permission or
-     * package parsing errors across Android 7-15 OEM launchers.
+     * Stages the downloaded APK into our FileProvider-backed cache directory and verifies
+     * ZIP header, package name, versionCode, and signing certificate before launching PackageInstaller.
      */
-    private fun resolveInstallableFileProviderUri(filenameHint: String): Uri? {
+    private fun resolveAndValidateStagedApk(filenameHint: String): Pair<Uri?, String?> {
         val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val sourceUri: Uri? = lastDownloadedUri ?: if (lastDownloadId >= 0L) {
             dm.getUriForDownloadedFile(lastDownloadId)
@@ -633,34 +677,78 @@ class MainActivity : Activity() {
                         input.copyTo(output, 32768)
                     }
                 }
-                if (stagedApk.exists() && stagedApk.length() > 102400L) {
-                    return FileProvider.getUriForFile(this, "$packageName.fileprovider", stagedApk)
-                }
             } catch (_: Exception) {
                 stagedApk.delete()
             }
         }
 
-        // Secondary lookup directly in public Download directory (pre-Q or shared path)
-        @Suppress("DEPRECATION")
-        val publicFile = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            cleanName
-        )
-        if (publicFile.exists() && publicFile.length() > 102400L) {
-            return try {
-                publicFile.inputStream().use { input ->
-                    FileOutputStream(stagedApk).use { output ->
-                        input.copyTo(output, 32768)
+        if (!stagedApk.exists() || stagedApk.length() <= 102400L) {
+            // Secondary lookup directly in public Download directory
+            @Suppress("DEPRECATION")
+            val publicFile = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                cleanName
+            )
+            if (publicFile.exists() && publicFile.length() > 102400L) {
+                try {
+                    publicFile.inputStream().use { input ->
+                        FileOutputStream(stagedApk).use { output ->
+                            input.copyTo(output, 32768)
+                        }
                     }
+                } catch (_: Exception) {
+                    stagedApk.delete()
                 }
-                FileProvider.getUriForFile(this, "$packageName.fileprovider", stagedApk)
-            } catch (_: Exception) {
-                sourceUri
             }
         }
 
-        return sourceUri
+        if (!stagedApk.exists() || stagedApk.length() <= 102400L) {
+            return Pair(null, "Downloaded APK file not found or incomplete in Download folder")
+        }
+
+        if (!isZipApkHeader(stagedApk)) {
+            stagedApk.delete()
+            return Pair(null, "Downloaded file is not a valid APK package. Please try again.")
+        }
+
+        try {
+            @Suppress("DEPRECATION")
+            val sigFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                PackageManager.GET_SIGNATURES
+            }
+            val archiveInfo = packageManager.getPackageArchiveInfo(stagedApk.absolutePath, sigFlag)
+                ?: return Pair(null, "Downloaded APK is corrupted and could not be parsed.")
+
+            if (archiveInfo.packageName != packageName) {
+                return Pair(null, "APK package ID mismatch (${archiveInfo.packageName}).")
+            }
+
+            val installedInfo = packageManager.getPackageInfo(packageName, sigFlag)
+            val archiveVerCode = getPackageLongVersionCode(archiveInfo)
+            val installedVerCode = getPackageLongVersionCode(installedInfo)
+            if (archiveVerCode < installedVerCode) {
+                return Pair(
+                    null,
+                    "Update blocked: downloaded APK build ($archiveVerCode) is older than installed ($installedVerCode)."
+                )
+            }
+
+            val installedSigs = extractSignatureHexSet(installedInfo)
+            val archiveSigs = extractSignatureHexSet(archiveInfo)
+            if (installedSigs.isNotEmpty() && archiveSigs.isNotEmpty() && installedSigs.intersect(archiveSigs).isEmpty()) {
+                return Pair(
+                    null,
+                    "Signature mismatch with your older installed build. Export JSON backup or sync Google Sheet, uninstall the current app once, and install Download/$cleanName."
+                )
+            }
+        } catch (_: Exception) {
+            // Proceed with FileProvider URI if OEM restricts getPackageArchiveInfo inspection
+        }
+
+        val providerUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", stagedApk)
+        return Pair(providerUri, null)
     }
 
     private fun launchApkInstaller(uri: Uri) {
@@ -679,6 +767,7 @@ class MainActivity : Activity() {
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/vnd.android.package-archive")
+                clipData = ClipData.newRawUri("", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -707,11 +796,11 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun installApk(filename: String) {
             executor.execute {
-                val installUri = resolveInstallableFileProviderUri(filename)
+                val (installUri, errorMsg) = resolveAndValidateStagedApk(filename)
                 if (installUri != null) {
                     runOnUiThread { launchApkInstaller(installUri) }
                 } else {
-                    notifyJsError("Downloaded APK file not found in Download folder")
+                    notifyJsError(errorMsg ?: "Downloaded APK file not found in Download folder")
                 }
             }
         }
