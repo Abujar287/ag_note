@@ -2,8 +2,8 @@ import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
 
-const SOURCE_LOGO = path.resolve('public/assets/aistudio/image_2026-11-24_16-45-21_2982bd84.png');
-const BRAND_BG = { r: 247, g: 234, b: 159, alpha: 1 };
+const SOURCE_LOGO = path.resolve('public/assets/aistudio/image_c4fcbe6a.png');
+const BRAND_BG = { r: 242, g: 206, b: 93, alpha: 1 };
 
 async function createCircularMaskedLogo(size) {
   const circleMask = Buffer.from(
@@ -13,6 +13,7 @@ async function createCircularMaskedLogo(size) {
   );
 
   return sharp(SOURCE_LOGO)
+    .extract({ left: 28, top: 27, width: 964, height: 964 })
     .resize(size, size, { fit: 'cover' })
     .ensureAlpha()
     .composite([{ input: circleMask, blend: 'dest-in' }])

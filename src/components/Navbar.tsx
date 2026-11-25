@@ -16,15 +16,14 @@ import {
 } from 'lucide-react';
 import { ViewMode } from '../types/note';
 
-export type ColorThemeId = 'emerald' | 'ocean' | 'royal' | 'crimson' | 'mono';
+import {
+  ColorThemeId,
+  CLASSIC_THEMES,
+  CLASSIC_THEMES as APP_THEMES,
+} from '../config/themes';
 
-export const APP_THEMES: { id: ColorThemeId; label: string; swatch: string }[] = [
-  { id: 'emerald', label: 'Emerald Gold', swatch: '#D4AF37' },
-  { id: 'ocean', label: 'Ocean Blue', swatch: '#2563EB' },
-  { id: 'royal', label: 'Royal Violet', swatch: '#7C3AED' },
-  { id: 'crimson', label: 'Warm Rose', swatch: '#E11D48' },
-  { id: 'mono', label: 'Graphite', swatch: '#64748B' },
-];
+export type { ColorThemeId };
+export { APP_THEMES, CLASSIC_THEMES };
 
 interface NavbarProps {
   viewMode: ViewMode;

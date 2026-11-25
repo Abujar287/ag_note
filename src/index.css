@@ -3,121 +3,388 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
-  /* Default Theme: Emerald Gold */
+  /* Default Fallback: Cool Mist (neutral light) */
   :root,
-  [data-theme="emerald"] {
-    --bg-main: #F4F7F5;
-    --bg-card: #FFFFFF;
-    --bg-elevated: #EAF0EC;
-    --text-primary: #14241D;
-    --text-muted: #546E61;
-    --accent-gold: #B88F14;
-    --accent-contrast: #14241D;
-    --border: #D2DFD8;
+  [data-theme="cool-mist"] {
+    --bg-main: #E2E6EC;
+    --bg-card: #F8FAFC;
+    --bg-elevated: #D4DAE3;
+    --text-primary: #1A202C;
+    --text-muted: #526075;
+    --accent-gold: #3B495E;
+    --accent-contrast: #FFFFFF;
+    --border: #BFC8D6;
   }
 
-  .dark[data-theme="emerald"],
   .dark:not([data-theme]) {
-    --bg-main: #14241D;
-    --bg-card: #162920;
-    --bg-elevated: #12211A;
-    --text-primary: #F0F7F4;
-    --text-muted: #8DA89B;
-    --accent-gold: #D4AF37;
-    --accent-contrast: #14241D;
-    --border: #2D4A3D;
-  }
-
-  /* Ocean Blue */
-  [data-theme="ocean"] {
-    --bg-main: #F2F6FB;
-    --bg-card: #FFFFFF;
-    --bg-elevated: #E6EEF8;
-    --text-primary: #0F1E36;
-    --text-muted: #526684;
-    --accent-gold: #2563EB;
+    --bg-main: #172E2C;
+    --bg-card: #1E3A37;
+    --bg-elevated: #112321;
+    --text-primary: #EEF7F5;
+    --text-muted: #8BAEA9;
+    --accent-gold: #10B981;
     --accent-contrast: #FFFFFF;
-    --border: #CFDCEF;
+    --border: #2C524E;
   }
 
-  .dark[data-theme="ocean"] {
-    --bg-main: #0D1726;
-    --bg-card: #132036;
-    --bg-elevated: #0A1320;
-    --text-primary: #EDF4FF;
-    --text-muted: #8BA2C4;
-    --accent-gold: #38BDF8;
-    --accent-contrast: #0D1726;
-    --border: #243756;
-  }
-
-  /* Royal Violet */
-  [data-theme="royal"] {
-    --bg-main: #F6F3FB;
-    --bg-card: #FFFFFF;
-    --bg-elevated: #EDE7F7;
-    --text-primary: #1E1433;
-    --text-muted: #655780;
-    --accent-gold: #7C3AED;
+  /* 1. Coral Red (#F6644F) */
+  [data-theme="coral-red"] {
+    --bg-main: #FCD8D2;
+    --bg-card: #FFF6F5;
+    --bg-elevated: #F9E4E0;
+    --text-primary: #24110E;
+    --text-muted: #7A4C45;
+    --accent-gold: #F6644F;
     --accent-contrast: #FFFFFF;
-    --border: #DDD4EE;
+    --border: #F0B9B0;
   }
 
-  .dark[data-theme="royal"] {
-    --bg-main: #171126;
-    --bg-card: #1F1733;
-    --bg-elevated: #130E20;
-    --text-primary: #F5F1FF;
-    --text-muted: #9E91BC;
-    --accent-gold: #A78BFA;
-    --accent-contrast: #171126;
-    --border: #362957;
+  /* 2. Warm Peach (#FF9955) */
+  [data-theme="warm-peach"] {
+    --bg-main: #FFE2CC;
+    --bg-card: #FFF8F2;
+    --bg-elevated: #FCEAD9;
+    --text-primary: #26160A;
+    --text-muted: #7E573B;
+    --accent-gold: #FF9955;
+    --accent-contrast: #1E1208;
+    --border: #F4C7A3;
   }
 
-  /* Warm Crimson */
-  [data-theme="crimson"] {
-    --bg-main: #FBF4F6;
-    --bg-card: #FFFFFF;
-    --bg-elevated: #F6E9ED;
-    --text-primary: #2D141C;
-    --text-muted: #785460;
-    --accent-gold: #E11D48;
+  /* 3. Sunny Amber (#FFC72C) */
+  [data-theme="sunny-amber"] {
+    --bg-main: #FFEDB3;
+    --bg-card: #FFFDF4;
+    --bg-elevated: #FDF2CC;
+    --text-primary: #241C07;
+    --text-muted: #786532;
+    --accent-gold: #FFC72C;
+    --accent-contrast: #1D1705;
+    --border: #EED27B;
+  }
+
+  /* 4. Cocoa Brown (#8C4E37) */
+  [data-theme="cocoa-brown"] {
+    --bg-main: #E5CFC6;
+    --bg-card: #FBF7F5;
+    --bg-elevated: #F0DFD8;
+    --text-primary: #21130E;
+    --text-muted: #6E4E42;
+    --accent-gold: #8C4E37;
     --accent-contrast: #FFFFFF;
-    --border: #ECD4DC;
+    --border: #CEAFA2;
   }
 
-  .dark[data-theme="crimson"] {
-    --bg-main: #211117;
-    --bg-card: #2A161E;
-    --bg-elevated: #1A0D12;
-    --text-primary: #FFF1F4;
-    --text-muted: #BA8D99;
-    --accent-gold: #FB7185;
-    --accent-contrast: #211117;
-    --border: #4A2734;
+  /* 5. Chartreuse Lime (#C4D600) */
+  [data-theme="chartreuse-lime"] {
+    --bg-main: #ECF3AD;
+    --bg-card: #FCFDF2;
+    --bg-elevated: #F2F7C8;
+    --text-primary: #1D2106;
+    --text-muted: #5E662E;
+    --accent-gold: #C4D600;
+    --accent-contrast: #191C04;
+    --border: #D2DC7E;
   }
 
-  /* Classic Graphite */
-  [data-theme="mono"] {
-    --bg-main: #F4F4F5;
-    --bg-card: #FFFFFF;
-    --bg-elevated: #E8E8EC;
-    --text-primary: #18181B;
-    --text-muted: #64646E;
-    --accent-gold: #27272A;
+  /* 6. Fresh Lime (#8CE043) */
+  [data-theme="fresh-lime"] {
+    --bg-main: #DAF7BE;
+    --bg-card: #F8FEF2;
+    --bg-elevated: #E7FAD4;
+    --text-primary: #132208;
+    --text-muted: #4B6E32;
+    --accent-gold: #8CE043;
+    --accent-contrast: #101E05;
+    --border: #B7E68A;
+  }
+
+  /* 7. Leaf Green (#32C759) */
+  [data-theme="leaf-green"] {
+    --bg-main: #C2F0CE;
+    --bg-card: #F4FDF6;
+    --bg-elevated: #D8F7E0;
+    --text-primary: #0C2312;
+    --text-muted: #3B6E48;
+    --accent-gold: #32C759;
+    --accent-contrast: #091C0E;
+    --border: #98DEAA;
+  }
+
+  /* 8. Emerald Teal (#10B981) */
+  [data-theme="emerald-teal"] {
+    --bg-main: #BAECE0;
+    --bg-card: #F2FCF9;
+    --bg-elevated: #D2F5EB;
+    --text-primary: #0A241C;
+    --text-muted: #376E5D;
+    --accent-gold: #10B981;
     --accent-contrast: #FFFFFF;
-    --border: #D8D8E0;
+    --border: #8EDAC4;
   }
 
-  .dark[data-theme="mono"] {
-    --bg-main: #111113;
-    --bg-card: #1A1A1E;
-    --bg-elevated: #0D0D0F;
-    --text-primary: #F4F4F6;
-    --text-muted: #9898A4;
-    --accent-gold: #E4E4E7;
-    --accent-contrast: #111113;
-    --border: #2E2E35;
+  /* 9. Sky Cyan (#47B8F5) */
+  [data-theme="sky-cyan"] {
+    --bg-main: #C5E9FD;
+    --bg-card: #F4FBFF;
+    --bg-elevated: #DAF1FE;
+    --text-primary: #0B1E2B;
+    --text-muted: #3D657E;
+    --accent-gold: #47B8F5;
+    --accent-contrast: #081924;
+    --border: #97D5FA;
+  }
+
+  /* 10. Cerulean Blue (#4A89DC) */
+  [data-theme="cerulean-blue"] {
+    --bg-main: #C9DEF8;
+    --bg-card: #F5F9FE;
+    --bg-elevated: #DCEBFA;
+    --text-primary: #0E1C30;
+    --text-muted: #425E84;
+    --accent-gold: #4A89DC;
+    --accent-contrast: #FFFFFF;
+    --border: #9EC0EE;
+  }
+
+  /* 11. Royal Indigo (#4B6EF5) */
+  [data-theme="royal-indigo"] {
+    --bg-main: #CAD4FD;
+    --bg-card: #F5F7FF;
+    --bg-elevated: #DDE4FE;
+    --text-primary: #101633;
+    --text-muted: #465387;
+    --accent-gold: #4B6EF5;
+    --accent-contrast: #FFFFFF;
+    --border: #A1B3FA;
+  }
+
+  /* 12. Soft Violet (#9B6EF3) */
+  [data-theme="soft-violet"] {
+    --bg-main: #E2D4FC;
+    --bg-card: #F9F6FF;
+    --bg-elevated: #EDE4FE;
+    --text-primary: #1B1133;
+    --text-muted: #5C4987;
+    --accent-gold: #9B6EF3;
+    --accent-contrast: #FFFFFF;
+    --border: #C5AEF8;
+  }
+
+  /* 13. Orchid Magenta (#DA62E8) */
+  [data-theme="orchid-magenta"] {
+    --bg-main: #F5CEF9;
+    --bg-card: #FEF6FF;
+    --bg-elevated: #F9E0FC;
+    --text-primary: #28102C;
+    --text-muted: #75457D;
+    --accent-gold: #DA62E8;
+    --accent-contrast: #FFFFFF;
+    --border: #E5A7EE;
+  }
+
+  /* 14. Rose Pink (#FF4D94) */
+  [data-theme="rose-pink"] {
+    --bg-main: #FFC9DF;
+    --bg-card: #FFF5F9;
+    --bg-elevated: #FFE0ED;
+    --text-primary: #2B0F1B;
+    --text-muted: #7E435B;
+    --accent-gold: #FF4D94;
+    --accent-contrast: #FFFFFF;
+    --border: #F99EC2;
+  }
+
+  /* 16. Coral Dark Split (Top: #F6644F, Bottom: #252830) */
+  [data-theme="coral-dark-split"] {
+    --bg-main: #252830;
+    --bg-card: #32323A;
+    --bg-elevated: #1D1F26;
+    --text-primary: #F7F4F4;
+    --text-muted: #B0A3A4;
+    --accent-gold: #F6644F;
+    --accent-contrast: #FFFFFF;
+    --border: #4C3D42;
+  }
+
+  /* 17. Peach Dark Split (Top: #FF9955, Bottom: #252830) */
+  [data-theme="peach-dark-split"] {
+    --bg-main: #252830;
+    --bg-card: #323137;
+    --bg-elevated: #1D1F26;
+    --text-primary: #F7F5F2;
+    --text-muted: #B2A69B;
+    --accent-gold: #FF9955;
+    --accent-contrast: #1E1208;
+    --border: #4C423B;
+  }
+
+  /* 18. Amber Dark Split (Top: #FFC72C, Bottom: #2A2D2B) */
+  [data-theme="amber-dark-split"] {
+    --bg-main: #2A2D2B;
+    --bg-card: #363934;
+    --bg-elevated: #212321;
+    --text-primary: #F7F6F0;
+    --text-muted: #B0AE9C;
+    --accent-gold: #FFC72C;
+    --accent-contrast: #1D1705;
+    --border: #504D3B;
+  }
+
+  /* 19. Cocoa Dark Split (Top: #8C4E37, Bottom: #1E242B) */
+  [data-theme="cocoa-dark-split"] {
+    --bg-main: #1E242B;
+    --bg-card: #2B2E34;
+    --bg-elevated: #171C22;
+    --text-primary: #F5F2F0;
+    --text-muted: #AA9E99;
+    --accent-gold: #8C4E37;
+    --accent-contrast: #FFFFFF;
+    --border: #453B38;
+  }
+
+  /* 20. Lime Dark Split (Top: #C4D600, Bottom: #252B25) */
+  [data-theme="lime-dark-split"] {
+    --bg-main: #252B25;
+    --bg-card: #30372D;
+    --bg-elevated: #1C211C;
+    --text-primary: #F4F7EE;
+    --text-muted: #A4AD94;
+    --accent-gold: #C4D600;
+    --accent-contrast: #191C04;
+    --border: #474F3A;
+  }
+
+  /* 21. Fresh Lime Dark Split (Top: #8CE043, Bottom: #232B26) */
+  [data-theme="fresh-lime-dark-split"] {
+    --bg-main: #232B26;
+    --bg-card: #2D3730;
+    --bg-elevated: #1A211C;
+    --text-primary: #F2F7F0;
+    --text-muted: #9AAE9E;
+    --accent-gold: #8CE043;
+    --accent-contrast: #101E05;
+    --border: #3E4F40;
+  }
+
+  /* 22. Leaf Green Dark Split (Top: #32C759, Bottom: #1D2E2A) */
+  [data-theme="leaf-green-dark-split"] {
+    --bg-main: #1D2E2A;
+    --bg-card: #253B35;
+    --bg-elevated: #152320;
+    --text-primary: #EFF7F3;
+    --text-muted: #8FAD9E;
+    --accent-gold: #32C759;
+    --accent-contrast: #091C0E;
+    --border: #335246;
+  }
+
+  /* 23. Emerald Dark Split (Top: #10B981, Bottom: #172E2C) */
+  [data-theme="emerald-dark-split"] {
+    --bg-main: #172E2C;
+    --bg-card: #1E3A37;
+    --bg-elevated: #112321;
+    --text-primary: #EEF7F5;
+    --text-muted: #8BAEA9;
+    --accent-gold: #10B981;
+    --accent-contrast: #FFFFFF;
+    --border: #2C524E;
+  }
+
+  /* 24. Sky Cyan Dark Split (Top: #47B8F5, Bottom: #172A3A) */
+  [data-theme="sky-cyan-dark-split"] {
+    --bg-main: #172A3A;
+    --bg-card: #1F364A;
+    --bg-elevated: #11202D;
+    --text-primary: #EEF5FB;
+    --text-muted: #8CA7BE;
+    --accent-gold: #47B8F5;
+    --accent-contrast: #081924;
+    --border: #2E4C66;
+  }
+
+  /* 25. Cerulean Dark Split (Top: #4A89DC, Bottom: #17283E) */
+  [data-theme="cerulean-dark-split"] {
+    --bg-main: #17283E;
+    --bg-card: #1F3450;
+    --bg-elevated: #111F31;
+    --text-primary: #EEF4FB;
+    --text-muted: #8FA5C2;
+    --accent-gold: #4A89DC;
+    --accent-contrast: #FFFFFF;
+    --border: #2E496D;
+  }
+
+  /* 26. Royal Indigo Dark Split (Top: #4B6EF5, Bottom: #18223D) */
+  [data-theme="royal-indigo-dark-split"] {
+    --bg-main: #18223D;
+    --bg-card: #212D4F;
+    --bg-elevated: #121A2F;
+    --text-primary: #EFF2FB;
+    --text-muted: #929EC2;
+    --accent-gold: #4B6EF5;
+    --accent-contrast: #FFFFFF;
+    --border: #32426E;
+  }
+
+  /* 27. Violet Dark Split (Top: #9B6EF3, Bottom: #241E3B) */
+  [data-theme="violet-dark-split"] {
+    --bg-main: #241E3B;
+    --bg-card: #2F274C;
+    --bg-elevated: #1B162D;
+    --text-primary: #F4F0FB;
+    --text-muted: #A59AC4;
+    --accent-gold: #9B6EF3;
+    --accent-contrast: #FFFFFF;
+    --border: #44386B;
+  }
+
+  /* 28. Orchid Dark Split (Top: #DA62E8, Bottom: #2F1D38) */
+  [data-theme="orchid-dark-split"] {
+    --bg-main: #2F1D38;
+    --bg-card: #3D2649;
+    --bg-elevated: #23152A;
+    --text-primary: #F8F0FA;
+    --text-muted: #B396BD;
+    --accent-gold: #DA62E8;
+    --accent-contrast: #FFFFFF;
+    --border: #553663;
+  }
+
+  /* 29. Rose Pink Dark Split (Top: #FF4D94, Bottom: #331D2B) */
+  [data-theme="rose-pink-dark-split"] {
+    --bg-main: #331D2B;
+    --bg-card: #422538;
+    --bg-elevated: #261520;
+    --text-primary: #FAF0F5;
+    --text-muted: #BC94AA;
+    --accent-gold: #FF4D94;
+    --accent-contrast: #FFFFFF;
+    --border: #5C334B;
+  }
+
+  /* 30. Berry Plum Split (Top: #E84A8A, Bottom: #262133) */
+  [data-theme="berry-plum-split"] {
+    --bg-main: #262133;
+    --bg-card: #322B43;
+    --bg-elevated: #1D1927;
+    --text-primary: #F6F1F8;
+    --text-muted: #A89BB9;
+    --accent-gold: #E84A8A;
+    --accent-contrast: #FFFFFF;
+    --border: #493D5E;
+  }
+
+  /* 31. Deep Berry Split (Top: #E54886, Bottom: #241F31) */
+  [data-theme="deep-berry-split"] {
+    --bg-main: #241F31;
+    --bg-card: #302941;
+    --bg-elevated: #1B1725;
+    --text-primary: #F6F1F8;
+    --text-muted: #A699B8;
+    --accent-gold: #E54886;
+    --accent-contrast: #FFFFFF;
+    --border: #463B5B;
   }
 
   html,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Palette, Sun, Moon, Check } from 'lucide-react';
-import { APP_THEMES, ColorThemeId } from './Navbar';
+import { CLASSIC_THEMES, ColorThemeId, findClassicTheme } from '../config/themes';
 
 interface ThemeModalProps {
   isOpen: boolean;
@@ -21,27 +21,29 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const activeTheme = findClassicTheme(colorTheme);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
+        className="w-full max-w-md bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-[var(--accent-gold)]/15 border border-[var(--accent-gold)]/30 flex items-center justify-center">
               <Palette className="w-4 h-4 text-[var(--accent-gold)]" />
             </div>
             <div>
               <h3 className="font-bold text-[var(--text-primary)] text-sm sm:text-base leading-tight">
-                Theme & Display
+                Theme &amp; Display
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
-                Customize display mode &amp; color palette
+                Customize display mode &amp; classic color themes
               </p>
             </div>
           </div>
@@ -56,7 +58,7 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-4 sm:p-5 space-y-5">
+        <div className="p-4 sm:p-5 space-y-5 overflow-y-auto">
           {/* Part 1: Display Mode (Light / Dark) */}
           <div className="space-y-2">
             <span className="block text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
@@ -90,33 +92,74 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
             </div>
           </div>
 
-          {/* Part 2: Color Theme Palette */}
-          <div className="space-y-2">
-            <span className="block text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
-              Color Theme
-            </span>
-            <div className="space-y-1.5">
-              {APP_THEMES.map((theme) => {
+          {/* Part 2: Classic Themes Swatch Grid (31 swatches) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="block text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
+                Classic Themes
+              </span>
+              {activeTheme && (
+                <span className="text-[11px] font-semibold text-[var(--text-primary)] truncate">
+                  {activeTheme.label}
+                </span>
+              )}
+            </div>
+
+            <div
+              className="grid grid-cols-5 min-[380px]:grid-cols-6 gap-2.5 p-2.5 rounded-2xl bg-[var(--bg-elevated)]/60 border border-[var(--border)]"
+              role="radiogroup"
+              aria-label="Classic Themes"
+            >
+              {CLASSIC_THEMES.map((theme) => {
                 const active = colorTheme === theme.id;
+                const isLightNeutral = theme.id === 'cool-mist';
+
                 return (
                   <button
                     key={theme.id}
                     type="button"
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={theme.label}
+                    title={theme.label}
                     onClick={() => onSelectColorTheme(theme.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`group relative aspect-square w-full rounded-xl overflow-hidden transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-gold)] ${
                       active
-                        ? 'bg-[var(--bg-elevated)] border-[var(--accent-gold)] text-[var(--accent-gold)] shadow-xs'
-                        : 'bg-[var(--bg-elevated)]/60 border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--accent-gold)]/50'
+                        ? 'ring-2 ring-[var(--accent-gold)] ring-offset-2 ring-offset-[var(--bg-card)] scale-[1.04] shadow-md'
+                        : 'hover:scale-[1.04] active:scale-95 ring-1 ring-inset ring-black/15 dark:ring-white/15'
                     }`}
                   >
-                    <span className="flex items-center gap-3">
+                    {theme.type === 'solid' ? (
                       <span
-                        className="w-5 h-5 rounded-full border border-black/15 shadow-xs shrink-0"
-                        style={{ backgroundColor: theme.swatch }}
+                        className="block w-full h-full"
+                        style={{ backgroundColor: theme.topColor }}
                       />
-                      <span>{theme.label}</span>
-                    </span>
-                    {active && <Check className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />}
+                    ) : (
+                      <span className="flex flex-col w-full h-full">
+                        <span
+                          className="w-full h-1/2"
+                          style={{ backgroundColor: theme.topColor }}
+                        />
+                        <span
+                          className="w-full h-1/2"
+                          style={{ backgroundColor: theme.bottomColor }}
+                        />
+                      </span>
+                    )}
+
+                    {/* Inner subtle border for light neutral Cool Mist swatch */}
+                    {isLightNeutral && (
+                      <span className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-black/15" />
+                    )}
+
+                    {/* Active checkmark badge */}
+                    {active && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/15">
+                        <span className="w-5 h-5 rounded-full bg-white text-slate-900 shadow-sm flex items-center justify-center">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </span>
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -125,7 +168,7 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 bg-[var(--bg-elevated)] border-t border-[var(--border)] flex justify-end">
+        <div className="px-5 py-3.5 bg-[var(--bg-elevated)] border-t border-[var(--border)] flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}

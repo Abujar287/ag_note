@@ -12,7 +12,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Note, NoteColor, SortMode, ViewMode } from './types/note';
-import { Navbar, ColorThemeId, APP_THEMES } from './components/Navbar';
+import { Navbar, ColorThemeId } from './components/Navbar';
+import { applyThemeTokens, findClassicTheme, resolveThemeId } from './config/themes';
 import { NoteCard } from './components/NoteCard';
 import { NoteModal } from './components/NoteModal';
 import { ViewNoteModal } from './components/ViewNoteModal';
@@ -282,22 +283,47 @@ export default function App() {
     setToast({ id: String(Date.now()), message, type, onUndo });
   };
 
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('notepad_theme');
-      if (saved === 'dark') return true;
-      if (saved === 'light') return false;
-      return true;
-    } catch { return true; }
-  });
-
   const [colorTheme, setColorTheme] = useState<ColorThemeId>(() => {
     try {
-      const saved = localStorage.getItem('notepad_color_theme') as ColorThemeId;
-      if (saved && APP_THEMES.some((t) => t.id === saved)) return saved;
-    } catch { /* ignore */ }
-    return 'emerald';
+      const savedTheme = localStorage.getItem('notepad_color_theme');
+      const savedMode = localStorage.getItem('notepad_theme');
+      const fallbackDark = savedMode === 'dark';
+      return resolveThemeId(savedTheme, fallbackDark);
+    } catch {
+      return 'cool-mist';
+    }
   });
+
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      const savedTheme = localStorage.getItem('notepad_color_theme');
+      const savedMode = localStorage.getItem('notepad_theme');
+      const resolvedId = resolveThemeId(savedTheme, savedMode === 'dark');
+      const themeMeta = findClassicTheme(resolvedId);
+      if (themeMeta) return themeMeta.isDark;
+      return savedMode === 'dark';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleSelectColorTheme = (themeId: ColorThemeId) => {
+    setColorTheme(themeId);
+    applyThemeTokens(themeId);
+    const meta = findClassicTheme(themeId);
+    if (meta) {
+      setIsDarkMode(meta.isDark);
+    }
+  };
+
+  const handleSetDarkMode = (dark: boolean) => {
+    setIsDarkMode(dark);
+    const currentMeta = findClassicTheme(colorTheme);
+    if (currentMeta && currentMeta.isDark !== dark) {
+      setColorTheme(currentMeta.pairedThemeId);
+      applyThemeTokens(currentMeta.pairedThemeId);
+    }
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -311,7 +337,7 @@ export default function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', colorTheme);
+    applyThemeTokens(colorTheme);
     try {
       localStorage.setItem('notepad_color_theme', colorTheme);
     } catch { /* ignore */ }
@@ -559,33 +585,9 @@ export default function App() {
     }
   };
 
-  // Auto-Sync in background only if a valid Apps Script URL is configured
-  useEffect(() => {
-    const url = sheetsUrl || FIXED_APPS_SCRIPT_URL;
-    if (!isValidAppsScriptUrl(url)) return;
-
-    // Initial silent auto-sync
-    handleSyncToGoogleSheets(true);
-
-    // Continuous interval every 30 seconds
-    const interval = setInterval(() => {
-      handleSyncToGoogleSheets(true);
-    }, 30000);
-
-    // Sync on tab focus
-    const onFocus = () => {
-      handleSyncToGoogleSheets(true);
-    };
-    window.addEventListener('focus', onFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [sheetsUrl]);
-
   const handleSaveNote = (noteData: any) => {
     const now = new Date().toISOString();
+    const isNewNote = !noteData.id;
     let updatedNotes: Note[] = [];
     let savedNote: Note;
     if (noteData.id) {
@@ -603,11 +605,13 @@ export default function App() {
       savedNote = newNote;
     }
     setNotes(updatedNotes);
-    showToast(noteData.id ? 'Note updated' : 'New note created');
+    showToast(isNewNote ? 'New note created' : 'Note updated');
 
-    // Auto-sync new/updated note to Google Sheet in background if valid URL is configured
-    if (isValidAppsScriptUrl(sheetsUrl)) {
-      fetch(sheetsUrl, {
+    // Sync only after adding a new note (if valid Apps Script URL is configured)
+    const url = sheetsUrl || FIXED_APPS_SCRIPT_URL;
+    if (isNewNote && isValidAppsScriptUrl(url)) {
+      setIsSyncingSheets(true);
+      fetch(url, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
@@ -616,9 +620,13 @@ export default function App() {
           notename: savedNote.title || 'Unknown Title',
           category: savedNote.category || 'General',
           note: savedNote.content || '',
-          action: noteData.id ? 'UPDATE' : 'CREATE'
+          action: 'CREATE'
         })
-      }).catch(() => {});
+      })
+        .catch(() => {})
+        .finally(() => {
+          setIsSyncingSheets(false);
+        });
     }
   };
 
@@ -831,7 +839,12 @@ export default function App() {
     ) {
       return false;
     }
-    return window.scrollY <= 2;
+    const scrollTop = Math.max(
+      window.scrollY || 0,
+      document.documentElement.scrollTop || 0,
+      document.body.scrollTop || 0
+    );
+    return scrollTop <= 2;
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -842,7 +855,12 @@ export default function App() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (pullStartYRef.current === null || e.touches.length !== 1) return;
-    if (window.scrollY > 2) {
+    const scrollTop = Math.max(
+      window.scrollY || 0,
+      document.documentElement.scrollTop || 0,
+      document.body.scrollTop || 0
+    );
+    if (scrollTop > 2) {
       pullStartYRef.current = null;
       isPullingRef.current = false;
       setPullDistance(0);
@@ -1372,8 +1390,8 @@ export default function App() {
         isOpen={isThemeModalOpen}
         isDarkMode={isDarkMode}
         colorTheme={colorTheme}
-        onSetDarkMode={setIsDarkMode}
-        onSelectColorTheme={setColorTheme}
+        onSetDarkMode={handleSetDarkMode}
+        onSelectColorTheme={handleSelectColorTheme}
         onClose={() => setIsThemeModalOpen(false)}
       />
 
