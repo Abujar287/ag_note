@@ -739,7 +739,7 @@ class MainActivity : Activity() {
             if (installedSigs.isNotEmpty() && archiveSigs.isNotEmpty() && installedSigs.intersect(archiveSigs).isEmpty()) {
                 return Pair(
                     null,
-                    "Signature mismatch with your older installed build. Export JSON backup or sync Google Sheet, uninstall the current app once, and install Download/$cleanName."
+                    "Signature mismatch with your older installed build. Uninstall the older app once, then install Download/$cleanName."
                 )
             }
         } catch (_: Exception) {

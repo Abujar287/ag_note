@@ -5,9 +5,6 @@ import {
   FolderCog,
   LayoutGrid,
   List as ListIcon,
-  Download,
-  Upload,
-  Settings,
   DownloadCloud,
   Layers,
   BarChart3,
@@ -35,9 +32,6 @@ interface NavbarProps {
   trashNotesCount: number;
   onToggleTrashView: (showTrash: boolean) => void;
   onOpenCategoryModal: () => void;
-  onExportNotes: () => void;
-  onImportNotes: (file: File) => void;
-  onOpenSettings: () => void;
   onOpenStats: () => void;
   onCheckUpdate: () => void;
 }
@@ -52,15 +46,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   trashNotesCount,
   onToggleTrashView,
   onOpenCategoryModal,
-  onExportNotes,
-  onImportNotes,
-  onOpenSettings,
   onOpenStats,
   onCheckUpdate,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -73,14 +63,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMenuOpen]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onImportNotes(file);
-      e.target.value = '';
-    }
-  };
 
   const activeThemeMeta = APP_THEMES.find((t) => t.id === colorTheme) || APP_THEMES[0];
 
@@ -174,49 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   </button>
 
-                  {/* Section 2: Data & Sync */}
-                  <div className="my-1.5 border-t border-[var(--border)]" />
-                  <div className="px-4 pt-1 pb-1 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
-                    Sync &amp; Backup
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenSettings();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
-                  >
-                    <Settings className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-                    <span>Google Sheet / Sync Settings</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onExportNotes();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
-                  >
-                    <Download className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
-                    <span>Export / Backup Notes</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      fileInputRef.current?.click();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
-                  >
-                    <Upload className="w-4 h-4 text-[#10B981] shrink-0" />
-                    <span>Import / Restore Notes</span>
-                  </button>
-
-                  {/* Section 3: Preferences & Stats */}
+                  {/* Section 2: Preferences & Stats */}
                   <div className="my-1.5 border-t border-[var(--border)]" />
                   <div className="px-4 pt-1 pb-1 text-[10px] font-black uppercase tracking-wider text-[var(--text-muted)]">
                     Preferences
@@ -272,13 +212,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
 
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".json"
-                onChange={handleFileChange}
-                className="hidden"
-              />
             </div>
 
             {/* 2. App logo */}
