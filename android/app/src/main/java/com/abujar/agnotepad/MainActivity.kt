@@ -623,19 +623,18 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION")
     private fun extractSignatureHexSet(info: PackageInfo?): Set<String> {
         if (info == null) return emptySet()
-        val sigs: Array<Signature>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val result = mutableSetOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val signingInfo = info.signingInfo
-            if (signingInfo == null) {
-                null
-            } else if (signingInfo.hasMultipleSigners()) {
-                signingInfo.apkContentsSigners
-            } else {
-                signingInfo.signingCertificateHistory
+            val modernSigs: Array<Signature>? = when {
+                signingInfo == null -> null
+                signingInfo.hasMultipleSigners() -> signingInfo.apkContentsSigners
+                else -> signingInfo.signingCertificateHistory
             }
-        } else {
-            info.signatures
+            modernSigs?.forEach { result.add(it.toCharsString()) }
         }
-        return sigs?.map { it.toCharsString() }?.toSet() ?: emptySet()
+        info.signatures?.forEach { result.add(it.toCharsString()) }
+        return result
     }
 
     @Suppress("DEPRECATION")
@@ -714,7 +713,7 @@ class MainActivity : Activity() {
         try {
             @Suppress("DEPRECATION")
             val sigFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                PackageManager.GET_SIGNING_CERTIFICATES
+                PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
             } else {
                 PackageManager.GET_SIGNATURES
             }
